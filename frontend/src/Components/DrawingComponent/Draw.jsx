@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import Draw from 'ol/interaction/Draw.js';
 import { Style, Fill, Stroke } from 'ol/style';
-import Button from '@mui/material/Button';
+import EditIcon from '@mui/icons-material/Edit';
+import StopIcon from '@mui/icons-material/Stop';
 import { useMapContext } from '../../Contexts/MapContext';
+import { IconButton, Tooltip } from '@mui/material';
 
 const DrawingComponent = ({
   name,
@@ -17,7 +19,7 @@ const DrawingComponent = ({
   const activeRowRef = useRef(null);
   const { map, vectorSource, drawnFeatures, setDrawnFeatures } = useMapContext();
 
-  // Initialize drawRef once
+
   useEffect(() => {
     if (!drawRef.current && map) {
       drawRef.current = new Draw({
@@ -41,7 +43,6 @@ const DrawingComponent = ({
     }
   }, [map, vectorSource, rowColor, setDrawnFeatures]);
 
-  // Update the active interaction based on isActive
   useEffect(() => {
     if (!map || !drawRef.current) return;
 
@@ -53,22 +54,27 @@ const DrawingComponent = ({
     }
 
     return () => {
-      // Clean-up if unmounting or deactivating
+     
       if (map && map.getInteractions().getArray().includes(drawRef.current)) {
         map.removeInteraction(drawRef.current);
       }
     };
   }, [isActive, map, rowId]);
 
-  // Update feature visibility styling
   useEffect(() => {
     drawnFeatures.forEach((feature) => {
       if (feature.get('id') === rowId) {
         feature.setStyle(
           new Style({
-            fill: new Fill({ color: visible ? rowColor + 'CC' : 'transparent' }),
-            stroke: new Stroke({ color: visible ? rowColor : 'transparent', width: 2 }),
-            zIndex: 0,
+            fill: new Fill({
+              color: visible ? rowColor + '40' : 'transparent',
+            }),
+            stroke: new Stroke({
+              color: visible ? rowColor : 'transparent',
+              width: 4,
+              lineDash: [6, 4],
+            }),
+            zIndex: 10,
           })
         );
       }
@@ -87,13 +93,23 @@ const DrawingComponent = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <Button
-        variant="contained"
-        color={isActive ? 'error' : 'success'}
-        onClick={toggleDrawing}
-      >
-        {isActive ? 'Stop Drawing' : 'Start Drawing'}
-      </Button>
+    <Tooltip title={isActive ? 'Stop Drawing' : 'Start Drawing'} arrow>
+  <IconButton
+    onClick={toggleDrawing}
+    color={isActive ? 'error' : 'success'}
+    sx={{
+      borderRadius: '12px',
+      backgroundColor: isActive ? 'error.main' : 'success.main',
+      color: '#fff',
+      '&:hover': {
+        backgroundColor: isActive ? 'error.dark' : 'success.dark',
+      },
+      boxShadow: 2,
+    }}
+  >
+    {isActive ? <StopIcon /> : <EditIcon />}
+  </IconButton>
+</Tooltip>
     </div>
   );
 };

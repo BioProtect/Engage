@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material'; 
 
-const TogglePanel = ({ children, initialOpen = true, width = '400px', height = '600px' }) => {
+const TogglePanel = ({ children, initialOpen = true, width = '370px', height = '500px' }) => {
   const [isOpen, setIsOpen] = useState(initialOpen);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
@@ -25,7 +26,13 @@ const TogglePanel = ({ children, initialOpen = true, width = '400px', height = '
         transition: 'height 0.3s ease',
       }}
     >
-      <Button onClick={toggleOpen} variant="contained" color="primary" sx={{ marginBottom: 2 }}>
+      <Button
+        onClick={toggleOpen}
+        variant="contained"
+        color="primary"
+        sx={{ marginBottom: 2, display: 'flex', alignItems: 'center' }}
+      >
+        {isOpen ? <ExpandLess /> : <ExpandMore />} 
         {isOpen ? 'Hide Menu' : 'Show Menu'}
       </Button>
 

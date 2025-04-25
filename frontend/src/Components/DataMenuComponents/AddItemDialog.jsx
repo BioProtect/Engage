@@ -1,6 +1,6 @@
-// components/AddNewItem.jsx
 import React, { useState } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, IconButton, Button } from '@mui/material';
+import AddCircleIcon from '@mui/icons-material/AddCircle'; 
 
 const AddNewItem = ({ onAdd }) => {
   const [showModal, setShowModal] = useState(false);
@@ -20,7 +20,19 @@ const AddNewItem = ({ onAdd }) => {
   };
 
   const handleAddItem = () => {
-    onAdd(newItem);
+    if (newItem.Name && newItem.Description && newItem.Color) {
+      onAdd(newItem);
+      setShowModal(false);
+      setNewItem({
+        Name: '',
+        Description: '',
+        Category: 'ecosystem',
+        Color: '#000000',
+      });
+    }
+  };
+
+  const handleCancel = () => {
     setShowModal(false);
     setNewItem({
       Name: '',
@@ -30,19 +42,23 @@ const AddNewItem = ({ onAdd }) => {
     });
   };
 
+  const isFormValid = newItem.Name && newItem.Description && newItem.Color;
+
   return (
     <div>
-      <Button
-        variant="contained"
+      <IconButton
         color="primary"
-        fullWidth
         onClick={() => setShowModal(true)}
-        sx={{ marginTop: 2 }}
+        sx={{
+          width: 40,  
+          height: 40, 
+          padding: 0,
+        }}
       >
-        Add New Item
-      </Button>
+        <AddCircleIcon sx={{ fontSize: 30 }} />
+      </IconButton>
 
-      <Dialog open={showModal} onClose={() => setShowModal(false)}>
+      <Dialog open={showModal} onClose={handleCancel}>
         <DialogTitle>Create New Item</DialogTitle>
         <DialogContent>
           <TextField
@@ -84,10 +100,19 @@ const AddNewItem = ({ onAdd }) => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowModal(false)} color="secondary">
+          <Button
+            onClick={handleCancel}  
+            color="error"  
+            variant="contained"
+          >
             Cancel
           </Button>
-          <Button onClick={handleAddItem} color="primary">
+          <Button
+            onClick={handleAddItem}
+            color="primary"
+            variant="contained" 
+            disabled={!isFormValid}
+          >
             Add Item
           </Button>
         </DialogActions>
