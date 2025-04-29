@@ -1,4 +1,3 @@
-// SortSelect.js
 import React from 'react';
 import { FormControl, Select, MenuItem } from '@mui/material';
 
@@ -10,6 +9,7 @@ const SortSelect = ({ sortOption, onChange }) => {
         <MenuItem value="Color">Sort by Color</MenuItem>
         <MenuItem value="Active">Sort by Active</MenuItem>
         <MenuItem value="Inactive">Sort by Inactive</MenuItem>
+        <MenuItem value="Drawings">Sort by Number of Drawings</MenuItem>
       </Select>
     </FormControl>
   );

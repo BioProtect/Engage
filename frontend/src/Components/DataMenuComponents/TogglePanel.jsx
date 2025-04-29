@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material'; 
 
-const TogglePanel = ({ children, initialOpen = true, width = '370px', height = '500px' }) => {
+const TogglePanel = ({ children, initialOpen = true, width = '370px', height = '600px' }) => {
   const [isOpen, setIsOpen] = useState(initialOpen);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);

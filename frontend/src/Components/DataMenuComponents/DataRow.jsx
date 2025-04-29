@@ -11,14 +11,11 @@ const DataRow = ({
   visibilityMap,
   handleCheckboxSelection,
   handleCheckboxChange,
-  getDrawingCount,
-  activeDrawingRow,
-  setActiveDrawingRow,
   deleteRow, 
 }) => {
   const [SettingsMenu, setSettingsMenu] = useState(null);
   const open = Boolean(SettingsMenu);
-  const { vectorSource, drawnFeatures, setDrawnFeatures } = useMapContext();
+  const { vectorSource, drawnFeatures, setDrawnFeatures, activeDrawingRow } = useMapContext();
 
  
   const clearRowDrawings = (rowId) => {
@@ -47,7 +44,7 @@ const DataRow = ({
     handleSettingsMenuClose();
   };
 
-  
+  const getDrawingCount = (id) => (drawnFeatures?.filter((f) => f.get('id') === id).length) || 0;
   const drawingCount = getDrawingCount(row.id);
   const canToggleCheckbox = drawingCount > 0; 
 
@@ -125,7 +122,6 @@ const DataRow = ({
           name={row.Name}
           rowId={row.id}
           isActive={activeDrawingRow === row.id}
-          setActiveDrawingRow={setActiveDrawingRow}
           rowColor={row.color}
           visible={visibilityMap[row.id] === true}
           handleCheckboxChange={handleCheckboxChange}
