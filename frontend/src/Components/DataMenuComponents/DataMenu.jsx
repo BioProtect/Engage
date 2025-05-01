@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
-import { Box, Divider, IconButton, Tooltip } from '@mui/material';
+import { Box, Divider, IconButton, Tooltip, Button } from '@mui/material';
 import { useMapContext } from '../../Contexts/MapContext';
 import AddItemDialog from './AddItemDialog';
 import CategoryTabs from './CategoryTabs';
 import SortSelect from './SortSelect';
-import TogglePanel from './TogglePanel';
 import DataRow from './DataRow';
 import FinishSessionButton from './FinishButton';
 import SearchField from './Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LayersIcon from '@mui/icons-material/Layers';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import SnackbarNotification from './SnackbarNotification'; 
 
 const DataMenu = () => {
+  const [isOpen, setIsOpen] = useState(true);
+  const toggleOpen = () => setIsOpen((prev) => !prev);
+
   const [data, setData] = useState({
     ecosystem: [
-      { id: 1, Name: 'Coral Reef', color: '#FF0000' },
-      { id: 2, Name: 'Fresh Water', color: '#00FF00' },
-      { id: 3, Name: 'Kelp Forest', color: '#0000FF' },
-      { id: 4, Name: 'Open Ocean', color: '#FFA500' },
-      { id: 5, Name: 'Salt Marsh', color: '#800080' },
+      { id: 1, Name: 'Coral Reef', color: '#FF6666', description: 'A diverse underwater ecosystem found in warm ocean waters.' },
+      { id: 2, Name: 'Fresh Water', color: '#8A2BE2', description: 'A habitat of rivers, lakes, and ponds that are low in salt content.' },
+      { id: 3, Name: 'Kelp Forest', color: '#32CD32', description: 'A coastal underwater forest of giant kelp plants, home to many species.' },
+      { id: 4, Name: 'Open Ocean', color: '#1E90FF', description: 'The vast, deep waters of the ocean away from the coast.' },
+      { id: 5, Name: 'Salt Marsh', color: '#D2691E', description: 'A coastal ecosystem of salt-tolerant plants and tidal waters.' },
     ],
     impacts: [
-      { id: 10, Name: 'Overfishing', color: '#FF0000' },
-      { id: 11, Name: 'Pollution', color: '#00FF00' },
-      { id: 12, Name: 'Rain', color: '#0000FF' },
-      { id: 13, Name: 'Wind', color: '#FFA500' },
+      { id: 10, Name: 'Overfishing', color: '#FF4500', description: 'The depletion of fish species due to excessive fishing.' },
+      { id: 11, Name: 'Pollution', color: '#2E8B57', description: 'The introduction of harmful substances into the environment.' },
+      { id: 12, Name: 'Rain', color: '#4169E1', description: 'Precipitation in the form of water droplets falling from the sky.' },
+      { id: 13, Name: 'Wind', color: '#FFD700', description: 'The movement of air from high to low pressure areas.' },
     ],
   });
 
@@ -47,6 +51,8 @@ const DataMenu = () => {
     vectorSource,
     geoTiffLayer,
     map,
+    drawRef,
+    setActiveDrawingRow
   } = useMapContext();
 
   const [geoTiffVisible, setGeoTiffVisible] = useState(true);
@@ -58,8 +64,10 @@ const DataMenu = () => {
   };
 
   const [visibilityMap, setVisibilityMap] = useState({});
-  const handleCheckboxSelection = (id) =>
+  const handleCheckboxSelection = (id) => {
     setVisibilityMap((prev) => ({ ...prev, [id]: !prev[id] }));
+    setSelectedFeature(null);
+  };
   const handleCheckboxChange = (id, isVisible) =>
     setVisibilityMap((prev) => ({ ...prev, [id]: isVisible }));
 
@@ -69,13 +77,20 @@ const DataMenu = () => {
       newData[category] = newData[category].filter((row) => row.id !== rowId);
     });
     setData(newData);
+    map.removeInteraction(drawRef.current);
+    handleSnackbarOpen('Row deleted successfully!');
   };
 
   const handleDeleteSelectedFeature = () => {
     if (selectedFeature) {
       vectorSource.removeFeature(selectedFeature);
       setDrawnFeatures((prev) => prev.filter((f) => f !== selectedFeature));
-      setSelectedFeature(null);
+      const featureId = selectedFeature.get('id');
+      const remainingFeatures = drawnFeatures.filter((f) => f.get('id') === featureId);
+      if (remainingFeatures.length === 1) {
+        handleCheckboxChange(featureId, false);
+      }
+      handleSnackbarOpen('Feature deleted successfully!');
     }
   };
 
@@ -131,38 +146,83 @@ const DataMenu = () => {
       ],
     };
     setData(newData);
+    handleSnackbarOpen('Item added successfully!');
   };
 
   const handleFinishSession = () => {
+    setActiveDrawingRow(null);
+    map.removeInteraction(drawRef.current);
+  
+    drawnFeatures.forEach((feature) => {
+      const featureId = feature.get('id');
+      handleCheckboxChange(featureId, false);
+    });
+    handleSnackbarOpen('Session sucessfully saved!');
   };
 
-  const getRowStyle = (rowId) =>
-    rowId === activeDrawingRow
-      ? {
-          boxShadow: '0 0 10px 2px rgba(0, 0, 255, 0.7)',
-          backgroundColor: '#f0f8ff',
-        }
-      : {};
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  const handleSnackbarOpen = (message) => {
+    setSnackbarMessage(message);
+    setOpenSnackbar(true);
+  };
+
+  const handleSnackbarClose = () => {
+    setOpenSnackbar(false);
+  };
 
   return (
-    <TogglePanel>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: 2,
-          justifyContent: 'space-between',
-        }}
+    <div
+      style={{
+        width: '370px',
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        backgroundColor: 'white',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0px 0px 15px rgba(0,0,0,0.1)',
+        zIndex: 1000,
+        maxHeight: isOpen ? '600px' : stickyRow ? '170px' : '60px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'max-height 0.4s ease',
+      }}
+    >
+      <Button
+        onClick={toggleOpen}
+        variant="contained"
+        color="primary"
+        sx={{ marginBottom: 2, display: 'flex', alignItems: 'center' }}
       >
-        <CategoryTabs
-          categories={categoryList}
-          selectedCategory={selectedCategory}
-          onSelect={handleCategoryChange}
-        />
-        <SortSelect sortOption={sortOption} onChange={handleSortChange} />
-      </Box>
+        {isOpen ? <ExpandLess /> : <ExpandMore />}
+        {isOpen ? 'Hide Menu' : 'Show Menu'}
+      </Button>
 
-      <SearchField searchQuery={searchQuery} onSearchChange={handleSearchChange} />
+      {isOpen && (
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: 2,
+              justifyContent: 'space-between',
+            }}
+          >
+            <CategoryTabs
+              categories={categoryList}
+              selectedCategory={selectedCategory}
+              onSelect={handleCategoryChange}
+            />
+            <SortSelect sortOption={sortOption} onChange={handleSortChange} />
+          </Box>
+
+          <SearchField searchQuery={searchQuery} onSearchChange={handleSearchChange} />
+        </>
+      )}
 
       {stickyRow && (
         <Box sx={{ marginBottom: 2 }}>
@@ -172,58 +232,67 @@ const DataMenu = () => {
             handleCheckboxSelection={handleCheckboxSelection}
             handleCheckboxChange={handleCheckboxChange}
             deleteRow={deleteRow}
-            style={getRowStyle(stickyRow.id)}
           />
         </Box>
       )}
 
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
-        {filteredData.map((row) => (
-          <DataRow
-            key={row.id}
-            row={row}
-            visibilityMap={visibilityMap}
-            handleCheckboxSelection={handleCheckboxSelection}
-            handleCheckboxChange={handleCheckboxChange}
-            deleteRow={deleteRow}
-            style={getRowStyle(row.id)}
-          />
-        ))}
-      </Box>
+      {isOpen && (
+        <>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
+            {filteredData.map((row) => (
+              <DataRow
+                key={row.id}
+                row={row}
+                visibilityMap={visibilityMap}
+                handleCheckboxSelection={handleCheckboxSelection}
+                handleCheckboxChange={handleCheckboxChange}
+                deleteRow={deleteRow}
+              />
+            ))}
+          </Box>
 
-      <Divider />
+          <Divider />
 
-      <Box
-        sx={{
-          marginTop: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 2,
-        }}
-      >
-        <AddItemDialog onAdd={handleAddItem} />
-
-        <IconButton
-          sx={{ color: selectedFeature ? 'red' : 'gray' }}
-          disabled={!selectedFeature}
-          onClick={handleDeleteSelectedFeature}
-        >
-          <DeleteIcon />
-        </IconButton>
-
-        <Tooltip title={geoTiffVisible ? 'Hide GeoTIFF Layer' : 'Show GeoTIFF Layer'}>
-          <IconButton
-            sx={{ color: geoTiffVisible ? 'green' : 'gray' }}
-            onClick={toggleGeoTiffLayer}
+          <Box
+            sx={{
+              marginTop: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+            }}
           >
-            <LayersIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
+            <AddItemDialog onAdd={handleAddItem} />
 
-      <FinishSessionButton onFinish={handleFinishSession} />
-    </TogglePanel>
+            <IconButton
+              sx={{ color: selectedFeature ? 'red' : 'gray' }}
+              disabled={!selectedFeature}
+              onClick={handleDeleteSelectedFeature}
+            >
+              <DeleteIcon />
+            </IconButton>
+
+            <Tooltip title={geoTiffVisible ? 'Hide GeoTIFF Layer' : 'Show GeoTIFF Layer'}>
+              <IconButton
+                sx={{ color: geoTiffVisible ? 'green' : 'gray' }}
+                onClick={toggleGeoTiffLayer}
+              >
+                <LayersIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <FinishSessionButton onFinish={handleFinishSession} />
+        </>
+      )}
+
+      {/* Snackbar notification */}
+      <SnackbarNotification
+        open={openSnackbar}
+        message={snackbarMessage}
+        onClose={handleSnackbarClose}
+      />
+    </div>
   );
 };
 

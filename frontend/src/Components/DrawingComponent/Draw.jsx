@@ -5,9 +5,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import StopIcon from '@mui/icons-material/Stop';
 import { useMapContext } from '../../Contexts/MapContext';
 import { IconButton, Tooltip } from '@mui/material';
-import {click} from 'ol/events/condition';
+import { click } from 'ol/events/condition';
 import Select from 'ol/interaction/Select';
-import { getUid } from 'ol/util';
 
 const DrawingComponent = ({
   name,
@@ -20,31 +19,22 @@ const DrawingComponent = ({
   const { map, vectorSource, drawnFeatures, setDrawnFeatures, drawRef, setActiveDrawingRow, activeDrawingRow, setSelectedFeature } = useMapContext();
 
   const selectRef = useRef(null);
-  
-  const selected = new Style({
-    fill: new Fill({
-      color: '#eeeeee',
-    }),
-    stroke: new Stroke({
-      color: 'rgba(255, 255, 255, 0.7)',
-      width: 2,
-    }),
-  });
+
+
 
   function selectStyle(feature) {
     return new Style({
       fill: new Fill({
-        color: 'rgba(51, 153, 204, 0.25)', // semi-transparent sky blue
+        color: 'rgba(51, 153, 204, 0.25)', 
       }),
       stroke: new Stroke({
-        color: '#3399cc', // sky blue
+        color: '#3399cc', 
         width: 4,
-        lineDash: [6, 4], // mimic the default style
+        lineDash: [6, 4], 
       }),
-      zIndex: 11, // optional: draw on top
+      zIndex: 11,
     });
   }
-  
 
   const createFeatureStyle = (rowColor, visible) => {
     return new Style({
@@ -59,6 +49,7 @@ const DrawingComponent = ({
       zIndex: 10,
     });
   };
+
   useEffect(() => {
     drawnFeatures.forEach((feature) => {
       if (feature.get('id') === rowId) {
@@ -75,7 +66,6 @@ const DrawingComponent = ({
       }
     });
   }, [visible, rowColor, drawnFeatures, rowId, vectorSource]);
-  
 
   const toggleDrawing = () => {
     if (drawRef.current) {
@@ -88,41 +78,43 @@ const DrawingComponent = ({
       map.removeInteraction(selectRef.current);
       selectRef.current = null;
     }
-  
+
     if (!isActive || activeDrawingRow !== rowId) {
       const newDrawInteraction = new Draw({
         source: vectorSource,
         type: 'Polygon',
         freehand: true,
       });
-  
+
       drawRef.current = newDrawInteraction;
       setActiveDrawingRow(rowId);
       handleCheckboxChange(rowId, true);
-  
+
       newDrawInteraction.on('drawend', (event) => {
         const feature = event.feature;
         feature.set('id', rowId);
         feature.setStyle(createFeatureStyle(rowColor, visible));
         setDrawnFeatures((prev) => [...prev, feature]);
       });
-  
+
       const selectInteraction = new Select({
         condition: click,
         style: selectStyle,
       });
-  
+
       selectInteraction.on('select', (event) => {
         const selected = event.selected[0] || null;
         setSelectedFeature(selected);
       });
-  
+
       selectRef.current = selectInteraction;
-  
+
       map.addInteraction(selectInteraction);
       map.addInteraction(newDrawInteraction);
     } else {
-      handleCheckboxChange(rowId, true);
+      if (drawnFeatures.some((feature) => feature.get('id') === rowId)) {
+        handleCheckboxChange(rowId, true);
+      }
     }
   };
 
