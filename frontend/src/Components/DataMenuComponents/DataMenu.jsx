@@ -175,18 +175,24 @@ const DataMenu = () => {
   };
 
   return (
-    <div
-      style={{
-        width: '370px',
+    <Box
+      sx={{
         position: 'absolute',
-        top: '10px',
-        left: '10px',
-        backgroundColor: 'white',
-        padding: '16px',
-        borderRadius: '8px',
-        boxShadow: '0px 0px 15px rgba(0,0,0,0.1)',
+        top: { xs: 1, sm: 5, lg: 10 },         // theme.spacing(1) = 8px
+        left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-        maxHeight: isOpen ? '600px' : stickyRow ? '170px' : '60px',
+
+        bgcolor: 'background.paper',
+        p: 2,
+        borderRadius: 2,
+        boxShadow: 3,
+
+        /* fluid width: 90% on xs, 370px on sm+ */
+        width: { xs: '60vw', sm: '45vw', md: '40vw', lg: '370px' },
+        maxWidth: 370,
+
+        /* maxHeight + transition copied from your inline style */
+        maxHeight: isOpen ? 600 : stickyRow ? 170 : 60,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -293,7 +299,7 @@ const DataMenu = () => {
         message={snackbarMessage}
         onClose={handleSnackbarClose}
       />
-    </div>
+    </Box>
   );
 };
 
