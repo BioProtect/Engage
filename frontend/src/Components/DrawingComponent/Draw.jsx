@@ -1,3 +1,4 @@
+import { Fill, Stroke, Style } from 'ol/style';
 import { IconButton, Tooltip } from '@mui/material';
 import React, { memo, useEffect, useRef } from 'react';
 

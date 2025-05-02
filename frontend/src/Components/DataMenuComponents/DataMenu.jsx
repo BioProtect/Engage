@@ -8,7 +8,6 @@ import DataRow from './DataRow';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FinishSessionButton from './FinishButton';
 import LayersIcon from '@mui/icons-material/Layers';
-import RedoIcon from '@mui/icons-material/Redo';
 import SearchField from './Search';
 import SnackbarNotification from './SnackbarNotification';
 import SortSelect from './SortSelect';
@@ -19,70 +18,18 @@ const DataMenu = () => {
   const toggleOpen = () => setIsOpen((prev) => !prev);
 
   const [data, setData] = useState({
-    ecosystem: [{
-      id: 1,
-      Name: 'Coral Reef',
-      color: '#FF6666',
-      description: 'A diverse underwater ecosystem found in warm ocean waters.'
-    },
-    {
-      id: 2,
-      Name: 'Fresh Water',
-      color: '#8A2BE2',
-      description: 'A habitat of rivers, lakes, and ponds that are low in salt content.'
-
-    },
-    {
-      id: 3,
-      Name: 'Kelp Forest',
-      color: '#32CD32',
-      description: 'A coastal underwater forest of giant kelp plants, home to many species.'
-
-    },
-    {
-      id: 4,
-      Name: 'Open Ocean',
-      color: '#1E90FF',
-      description: 'The vast, deep waters of the ocean away from the coast.'
-
-    },
-    {
-      id: 5,
-      Name: 'Salt Marsh',
-      color: '#D2691E',
-      description: 'A coastal ecosystem of salt-tolerant plants and tidal waters.'
-
-    },
+    ecosystem: [
+      { id: 1, Name: 'Coral Reef', color: '#FF6666', description: 'A diverse underwater ecosystem found in warm ocean waters.' },
+      { id: 2, Name: 'Fresh Water', color: '#8A2BE2', description: 'A habitat of rivers, lakes, and ponds that are low in salt content.' },
+      { id: 3, Name: 'Kelp Forest', color: '#32CD32', description: 'A coastal underwater forest of giant kelp plants, home to many species.' },
+      { id: 4, Name: 'Open Ocean', color: '#1E90FF', description: 'The vast, deep waters of the ocean away from the coast.' },
+      { id: 5, Name: 'Salt Marsh', color: '#D2691E', description: 'A coastal ecosystem of salt-tolerant plants and tidal waters.' },
     ],
     impacts: [
-      {
-        id: 10,
-        Name: 'Overfishing',
-        color: '#FF4500',
-        description: 'The depletion of fish species due to excessive fishing.'
-
-      },
-      {
-        id: 11,
-        Name: 'Pollution',
-        color: '#2E8B57',
-        description: 'The introduction of harmful substances into the environment.'
-
-      },
-      {
-        id: 12,
-        Name: 'Rain',
-        color: '#4169E1',
-        description: 'Precipitation in the form of water droplets falling from the sky.'
-
-      },
-      {
-        id: 13,
-        Name: 'Wind',
-        color: '#FFD700',
-        description: 'The movement of air from high to low pressure areas.'
-
-      },
+      { id: 10, Name: 'Overfishing', color: '#FF4500', description: 'The depletion of fish species due to excessive fishing.' },
+      { id: 11, Name: 'Pollution', color: '#2E8B57', description: 'The introduction of harmful substances into the environment.' },
+      { id: 12, Name: 'Rain', color: '#4169E1', description: 'Precipitation in the form of water droplets falling from the sky.' },
+      { id: 13, Name: 'Wind', color: '#FFD700', description: 'The movement of air from high to low pressure areas.' },
     ],
   });
 
@@ -346,7 +293,7 @@ const DataMenu = () => {
         message={snackbarMessage}
         onClose={handleSnackbarClose}
       />
-    </div >
+    </div>
   );
 };
 
