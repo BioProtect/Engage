@@ -2,28 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
 import { useMapContext } from '../../Contexts/MapContext';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'; 
+
 const FinishSessionButton = ({ onFinish }) => {
   const { drawnFeatures, vectorSource, setDrawnFeatures } = useMapContext();
   const [openDialog, setOpenDialog] = useState(false);
   const [isButtonEnabled, setIsButtonEnabled] = useState(false);
 
- 
   useEffect(() => {
     if (drawnFeatures && drawnFeatures.length > 0) {
       setIsButtonEnabled(true);  
     } else {
       setIsButtonEnabled(false); 
     }
-  }, [drawnFeatures]);  
-
+  }, [drawnFeatures]);
 
   const clearAllDrawings = () => {
-   
     drawnFeatures.forEach((feature) => {
       vectorSource.removeFeature(feature); 
     });
-
-   
     setDrawnFeatures([]); 
   };
 
@@ -48,8 +44,8 @@ const FinishSessionButton = ({ onFinish }) => {
   return (
     <>
       <Button
-        variant="contained"
-        color="primary"
+        variant="contained" 
+        color="primary"  
         onClick={handleFinishSessionClick}
         disabled={!isButtonEnabled} 
         sx={{ marginTop: 2 }}
@@ -57,7 +53,6 @@ const FinishSessionButton = ({ onFinish }) => {
       >
         Finish Session
       </Button>
-
 
       <Dialog 
         open={openDialog} 
@@ -78,15 +73,19 @@ const FinishSessionButton = ({ onFinish }) => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between' }}>
+      
           <Button
             onClick={handleCloseDialog}
-            color="error" 
+            color="error"  
+            variant="contained"  
           >
             Cancel
           </Button>
+         
           <Button
             onClick={handleSaveSession}
-            color="primary"
+            color="primary"  
+            variant="contained" 
           >
             Save & Clear
           </Button>

@@ -1,21 +1,19 @@
 // src/components/MapComponent.js
 import React, { useEffect, useRef } from 'react';
 
+import GeoTIFF from 'ol/source/GeoTIFF.js';
 import Map from 'ol/Map.js';
 import OSM from 'ol/source/OSM.js';
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
-import View from 'ol/View.js';
-import XYZ from 'ol/source/XYZ.js';
-import { useGeographic } from 'ol/proj.js';
-import { useMapContext } from '../../Contexts/MapContext'; // Import context
+import WebGLTileLayer from 'ol/layer/WebGLTile.js';
+import { useMapContext } from '../../Contexts/MapContext';
 
 const TILE_SOURCE = 'mapbox';
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiYWxhbnJlaWR5IiwiYSI6ImNtNXdpd2RxczA5NmIyb3NjbHB3aWJ3bjcifQ.Ew9OYib3ETPK0cwUUWhPcA';
 const MAPBOX_STYLE = 'streets-v12';
 
-// Get tile source (Mapbox or OSM)
 const getTileLayerSource = () => {
 
   return TILE_SOURCE === 'mapbox'
@@ -31,20 +29,35 @@ const getTileLayerSource = () => {
 const MapComponent = () => {
 
   const mapRef = useRef(null);
-  const { setMap, setVectorSource } = useMapContext(); // Access context values
+  const { setMap, setVectorSource, setGeoTiffLayer } = useMapContext();
 
   useGeographic();
 
   useEffect(() => {
-    const raster = new TileLayer({ source: getTileLayerSource() });
-    const source = new VectorSource({ wrapX: false });
-    const vector = new VectorLayer({ source });
+    const baseLayer = new TileLayer({ source: getTileLayerSource() });
 
-    const olMap = new Map({
-      layers: [raster, vector],
+    const geoTiffLayer = new WebGLTileLayer({
+      source: new GeoTIFF({
+        sources: [
+          {
+            url: 'https://openlayers.org/data/raster/no-overviews.tif',
+            overviews: ['https://openlayers.org/data/raster/no-overviews.tif.ovr'],
+          },
+        ],
+      }),
+      opacity: 0.6,
+      visible: true,
+    });
+
+    const vectorSource = new VectorSource({ wrapX: false });
+    const vectorLayer = new VectorLayer({ source: vectorSource });
+
+    const map = new Map({
       target: mapRef.current,
-
+      layers: [baseLayer, geoTiffLayer, vectorLayer],
       view: new View({
+        // center: [-11000000, 4600000],
+        // zoom: 4,
         center: [-26.30, 59.99],
         zoom: 5,
         constrainOnlyCenter: true,
@@ -52,15 +65,14 @@ const MapComponent = () => {
       controls: [],
     });
 
-    // Set the map and vectorSource in context
-    setMap(olMap);
-    setVectorSource(source);
+    setMap(map);
+    setVectorSource(vectorSource);
+    setGeoTiffLayer(geoTiffLayer);
 
-    // Cleanup function to remove the map target on unmount
-    return () => olMap.setTarget(null);
-  }, [setMap, setVectorSource]);
+    return () => map.setTarget(null);
+  }, [setMap, setVectorSource, setGeoTiffLayer]);
 
-  return <div ref={mapRef} style={{ width: '100%', height: '100%' }}></div>;
+  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default MapComponent;
