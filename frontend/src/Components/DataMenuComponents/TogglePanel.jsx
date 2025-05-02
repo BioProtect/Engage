@@ -1,8 +1,13 @@
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import React, { useState } from 'react';
-import { Button } from '@mui/material';
-import { ExpandMore, ExpandLess } from '@mui/icons-material'; 
 
-const TogglePanel = ({ children, initialOpen = true, width = '370px', height = '500px' }) => {
+import { Button } from '@mui/material';
+
+const TogglePanel = ({
+  children,
+  initialOpen = true,
+  width = '370px',
+  height = '600px' }) => {
   const [isOpen, setIsOpen] = useState(initialOpen);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
@@ -32,7 +37,7 @@ const TogglePanel = ({ children, initialOpen = true, width = '370px', height = '
         color="primary"
         sx={{ marginBottom: 2, display: 'flex', alignItems: 'center' }}
       >
-        {isOpen ? <ExpandLess /> : <ExpandMore />} 
+        {isOpen ? <ExpandLess /> : <ExpandMore />}
         {isOpen ? 'Hide Menu' : 'Show Menu'}
       </Button>
 

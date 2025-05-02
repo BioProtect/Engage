@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
 import { Box, Divider, IconButton } from '@mui/material';
-import { useMapContext } from '../../Contexts/MapContext';
+import React, { useState } from 'react';
+
 import AddItemDialog from './AddItemDialog';
 import CategoryTabs from './CategoryTabs';
+import DataRow from './DataRow';
+import DeleteIcon from '@mui/icons-material/Delete';
+import FinishSessionButton from './FinishButton';
+import RedoIcon from '@mui/icons-material/Redo';
+import SearchField from './Search';
 import SortSelect from './SortSelect';
 import TogglePanel from './TogglePanel';
-import DataRow from './DataRow';
-import FinishSessionButton from './FinishButton';
-import SearchField from './Search'; 
 import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { useMapContext } from '../../Contexts/MapContext';
 
 const DataMenu = () => {
   const [data, setData] = useState({
@@ -35,7 +36,7 @@ const DataMenu = () => {
 
   const [sortOption, setSortOption] = useState('Name');
   const handleSortChange = (event) => setSortOption(event.target.value);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const handleSearchChange = (event) => setSearchQuery(event.target.value);
 
@@ -82,12 +83,19 @@ const DataMenu = () => {
   return (
     <TogglePanel>
       <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 2, justifyContent: 'space-between' }}>
-        <CategoryTabs categories={categoryList} selectedCategory={selectedCategory} onSelect={handleCategoryChange} />
-        <SortSelect sortOption={sortOption} onChange={handleSortChange} />
+        <CategoryTabs
+          categories={categoryList}
+          selectedCategory={selectedCategory}
+          onSelect={handleCategoryChange} />
+        <SortSelect
+          sortOption={sortOption}
+          onChange={handleSortChange} />
       </Box>
 
       {/* Use the SearchField component */}
-      <SearchField searchQuery={searchQuery} onSearchChange={handleSearchChange} />
+      <SearchField
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange} />
 
       {stickyRow && (
         <Box sx={{ marginBottom: 2 }}>
@@ -121,9 +129,16 @@ const DataMenu = () => {
       </Box>
 
       <Divider />
-      
 
-      <Box sx={{ marginTop: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+
+      <Box
+        sx={{
+          marginTop: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2
+        }}>
         <AddItemDialog onAdd={handleAddItem} />
         <IconButton
           sx={{ color: 'gray' }}

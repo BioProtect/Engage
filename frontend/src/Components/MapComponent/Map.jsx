@@ -1,12 +1,14 @@
 // src/components/MapComponent.js
 import React, { useEffect, useRef } from 'react';
+
 import Map from 'ol/Map.js';
-import View from 'ol/View.js';
+import OSM from 'ol/source/OSM.js';
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
-import XYZ from 'ol/source/XYZ.js';
-import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
+import View from 'ol/View.js';
+import XYZ from 'ol/source/XYZ.js';
+import { useGeographic } from 'ol/proj.js';
 import { useMapContext } from '../../Contexts/MapContext'; // Import context
 
 const TILE_SOURCE = 'mapbox';
@@ -15,19 +17,23 @@ const MAPBOX_STYLE = 'streets-v12';
 
 // Get tile source (Mapbox or OSM)
 const getTileLayerSource = () => {
+
   return TILE_SOURCE === 'mapbox'
     ? new XYZ({
-        url: `https://api.mapbox.com/styles/v1/mapbox/${MAPBOX_STYLE}/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_ACCESS_TOKEN}`,
-        tileSize: 512,
-        maxZoom: 22,
-        crossOrigin: 'anonymous',
-      })
+      url: `https://api.mapbox.com/styles/v1/mapbox/${MAPBOX_STYLE}/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_ACCESS_TOKEN}`,
+      tileSize: 512,
+      maxZoom: 22,
+      crossOrigin: 'anonymous',
+    })
     : new OSM();
 };
 
 const MapComponent = () => {
+
   const mapRef = useRef(null);
   const { setMap, setVectorSource } = useMapContext(); // Access context values
+
+  useGeographic();
 
   useEffect(() => {
     const raster = new TileLayer({ source: getTileLayerSource() });
@@ -37,10 +43,10 @@ const MapComponent = () => {
     const olMap = new Map({
       layers: [raster, vector],
       target: mapRef.current,
+
       view: new View({
-        center: [-11000000, 4600000],
-        zoom: 4,
-        extent: [-20037508.34, -20037508.34, 20037508.34, 20037508.34],
+        center: [-26.30, 59.99],
+        zoom: 5,
         constrainOnlyCenter: true,
       }),
       controls: [],

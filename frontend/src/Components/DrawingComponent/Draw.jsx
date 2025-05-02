@@ -1,10 +1,11 @@
+import { Fill, Stroke, Style } from 'ol/style';
+import { IconButton, Tooltip } from '@mui/material';
 import React, { useEffect, useRef } from 'react';
+
 import Draw from 'ol/interaction/Draw.js';
-import { Style, Fill, Stroke } from 'ol/style';
 import EditIcon from '@mui/icons-material/Edit';
 import StopIcon from '@mui/icons-material/Stop';
 import { useMapContext } from '../../Contexts/MapContext';
-import { IconButton, Tooltip } from '@mui/material';
 
 const DrawingComponent = ({
   name,
@@ -54,7 +55,6 @@ const DrawingComponent = ({
     }
 
     return () => {
-     
       if (map && map.getInteractions().getArray().includes(drawRef.current)) {
         map.removeInteraction(drawRef.current);
       }
@@ -93,23 +93,23 @@ const DrawingComponent = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-    <Tooltip title={isActive ? 'Stop Drawing' : 'Start Drawing'} arrow>
-  <IconButton
-    onClick={toggleDrawing}
-    color={isActive ? 'error' : 'success'}
-    sx={{
-      borderRadius: '12px',
-      backgroundColor: isActive ? 'error.main' : 'success.main',
-      color: '#fff',
-      '&:hover': {
-        backgroundColor: isActive ? 'error.dark' : 'success.dark',
-      },
-      boxShadow: 2,
-    }}
-  >
-    {isActive ? <StopIcon /> : <EditIcon />}
-  </IconButton>
-</Tooltip>
+      <Tooltip title={isActive ? 'Stop Drawing' : 'Start Drawing'} arrow>
+        <IconButton
+          onClick={toggleDrawing}
+          color={isActive ? 'error' : 'success'}
+          sx={{
+            borderRadius: '12px',
+            backgroundColor: isActive ? 'error.main' : 'success.main',
+            color: '#fff',
+            '&:hover': {
+              backgroundColor: isActive ? 'error.dark' : 'success.dark',
+            },
+            boxShadow: 2,
+          }}
+        >
+          {isActive ? <StopIcon /> : <EditIcon />}
+        </IconButton>
+      </Tooltip>
     </div>
   );
 };
