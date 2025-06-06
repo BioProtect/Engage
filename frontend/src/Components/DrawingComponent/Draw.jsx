@@ -1,6 +1,6 @@
-import { Box, Divider, IconButton, Slider, Stack, Tooltip, Typography } from '@mui/material';
 import { Fill, Stroke, Style, Text } from 'ol/style';
-import { memo, useEffect, useRef, useState } from 'react';
+import { IconButton, Tooltip } from '@mui/material';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import Draw from 'ol/interaction/Draw.js';
 import EditIcon from '@mui/icons-material/Edit';
@@ -153,12 +153,13 @@ const DrawingComponent = ({
     });
   }, [visible, rowColor, drawnFeatures, rowId, vectorSource, name, map, selectedFeature, selectedColor]);
 
-  const handleDelete = () => {
+
+  const handleDelete = useCallback(() => {
     if (!selectedFeature) return;
     vectorSource.removeFeature(selectedFeature);
     setDrawnFeatures((prev) => prev.filter((feature) => feature !== selectedFeature));
     setSelectedFeature(null);
-  };
+  }, [selectedFeature, vectorSource, setDrawnFeatures, setSelectedFeature]);
 
   // Reset density and description when selectedFeature changes (popup opens)
   useEffect(() => {
@@ -247,7 +248,7 @@ const DrawingComponent = ({
         }
       }
     }
-  }, [selectedFeature, visible, rowId, map, name, handleDelete, density, description]);
+  }, [selectedFeature, setSelectedFeature, visible, rowId, map, name, handleDelete, density, description]);
 
   const toggleDrawing = () => {
     if (drawRef.current) {

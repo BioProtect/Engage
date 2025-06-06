@@ -1,12 +1,11 @@
-import React from 'react';
 import { Box } from '@mui/material';
-import NatureIcon from '@mui/icons-material/Nature'; 
-import WarningIcon from '@mui/icons-material/Warning'; 
+import PhishingIcon from '@mui/icons-material/Phishing';
+import SetMealIcon from '@mui/icons-material/SetMeal';
 
 const CategoryTabs = ({ categories, selectedCategory, onSelect }) => {
   const categoryIcons = {
-    Features: <NatureIcon fontSize="small" />, 
-    Activities: <WarningIcon fontSize="small" />,  
+    Features: <SetMealIcon fontSize="small" />,
+    Activities: <PhishingIcon fontSize="small" />,
   };
 
   return (
