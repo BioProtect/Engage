@@ -7,7 +7,7 @@ const AddNewItem = ({ onAdd }) => {
   const [newItem, setNewItem] = useState({
     Name: '',
     Description: '',
-    Category: 'ecosystem',
+    Category: 'Features',
     Color: '#000000',
   });
 
@@ -26,7 +26,7 @@ const AddNewItem = ({ onAdd }) => {
       setNewItem({
         Name: '',
         Description: '',
-        Category: 'ecosystem',
+        Category: 'Features',
         Color: '#000000',
       });
     }
@@ -37,7 +37,7 @@ const AddNewItem = ({ onAdd }) => {
     setNewItem({
       Name: '',
       Description: '',
-      Category: 'ecosystem',
+      Category: 'Features',
       Color: '#000000',
     });
   };
@@ -85,8 +85,8 @@ const AddNewItem = ({ onAdd }) => {
               onChange={handleInputChange}
               label="Category"
             >
-              <MenuItem value="ecosystem">Ecosystem</MenuItem>
-              <MenuItem value="impacts">Impacts</MenuItem>
+              <MenuItem value="Features">Features</MenuItem>
+              <MenuItem value="Activities">Activities</MenuItem>
             </Select>
           </FormControl>
           <TextField
