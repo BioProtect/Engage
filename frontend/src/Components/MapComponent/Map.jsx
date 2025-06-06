@@ -35,7 +35,7 @@ const getTileLayerSource = () => {
 
 const mapBoxRasterLayer = new TileLayer({
   source: new XYZ({
-    url: `https://api.mapbox.com/v4/${MAPBOX_USER}.${TILESET_ID}/{z}/{x}/{y}@2x.png?access_token=${MAPBOX_ACCESS_TOKEN}`,
+    url: `https://api.mapbox.com/v4/${MAPBOX_USER}.${TILESET_ID}/{z}/{x}/{y}@2x.png?access_token=${MAPBOX_PUBLIC_ACCESS_TOKEN}`,
     tileSize: 512,          // 512px tiles match the @2x PNG
     maxZoom: 7,             // match your tileset’s maxzoom
     crossOrigin: 'anonymous'
