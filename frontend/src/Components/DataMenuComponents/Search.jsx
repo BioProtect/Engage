@@ -14,7 +14,6 @@ const SearchField = ({ searchQuery, onSearchChange }) => {
       fullWidth
       value={searchQuery}
       onChange={onSearchChange}
-      label="Search"
       variant="outlined"
       size="small"
       sx={{

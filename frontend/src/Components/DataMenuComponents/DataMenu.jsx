@@ -7,24 +7,25 @@ import SortSelect from './SortSelect';
 import DataRow from './DataRow';
 import FinishSessionButton from './FinishButton';
 import SearchField from './Search';
-import DeleteIcon from '@mui/icons-material/Delete';
 import LayersIcon from '@mui/icons-material/Layers';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import SnackbarNotification from './SnackbarNotification'; 
+import SearchOffIcon from '@mui/icons-material/SearchOff';
+
 
 const DataMenu = () => {
   const [isOpen, setIsOpen] = useState(true);
   const toggleOpen = () => setIsOpen((prev) => !prev);
 
   const [data, setData] = useState({
-    ecosystem: [
+    Features: [
       { id: 1, Name: 'Coral Reef', color: '#FF6666', description: 'A diverse underwater ecosystem found in warm ocean waters.' },
       { id: 2, Name: 'Fresh Water', color: '#8A2BE2', description: 'A habitat of rivers, lakes, and ponds that are low in salt content.' },
       { id: 3, Name: 'Kelp Forest', color: '#32CD32', description: 'A coastal underwater forest of giant kelp plants, home to many species.' },
       { id: 4, Name: 'Open Ocean', color: '#1E90FF', description: 'The vast, deep waters of the ocean away from the coast.' },
       { id: 5, Name: 'Salt Marsh', color: '#D2691E', description: 'A coastal ecosystem of salt-tolerant plants and tidal waters.' },
     ],
-    impacts: [
+    Activities: [
       { id: 10, Name: 'Overfishing', color: '#FF4500', description: 'The depletion of fish species due to excessive fishing.' },
       { id: 11, Name: 'Pollution', color: '#2E8B57', description: 'The introduction of harmful substances into the environment.' },
       { id: 12, Name: 'Rain', color: '#4169E1', description: 'Precipitation in the form of water droplets falling from the sky.' },
@@ -32,7 +33,7 @@ const DataMenu = () => {
     ],
   });
 
-  const categoryList = ['ecosystem', 'impacts'];
+  const categoryList = ['Features', 'Activities'];
   const [selectedCategory, setSelectedCategory] = useState(categoryList[0]);
   const handleCategoryChange = (category) => setSelectedCategory(category);
 
@@ -79,19 +80,6 @@ const DataMenu = () => {
     setData(newData);
     map.removeInteraction(drawRef.current);
     handleSnackbarOpen('Row deleted successfully!');
-  };
-
-  const handleDeleteSelectedFeature = () => {
-    if (selectedFeature) {
-      vectorSource.removeFeature(selectedFeature);
-      setDrawnFeatures((prev) => prev.filter((f) => f !== selectedFeature));
-      const featureId = selectedFeature.get('id');
-      const remainingFeatures = drawnFeatures.filter((f) => f.get('id') === featureId);
-      if (remainingFeatures.length === 1) {
-        handleCheckboxChange(featureId, false);
-      }
-      handleSnackbarOpen('Feature deleted successfully!');
-    }
   };
 
   const filteredData = data[selectedCategory]
@@ -160,7 +148,6 @@ const DataMenu = () => {
     handleSnackbarOpen('Session sucessfully saved!');
   };
 
-  // Snackbar state
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
@@ -192,15 +179,28 @@ const DataMenu = () => {
         transition: 'max-height 0.4s ease',
       }}
     >
-      <Button
-        onClick={toggleOpen}
-        variant="contained"
-        color="primary"
-        sx={{ marginBottom: 2, display: 'flex', alignItems: 'center' }}
-      >
-        {isOpen ? <ExpandLess /> : <ExpandMore />}
-        {isOpen ? 'Hide Menu' : 'Show Menu'}
-      </Button>
+
+
+<Button
+  onClick={toggleOpen}
+  variant="contained"
+  color="primary"
+  sx={{
+    mb: 2,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 1,
+    borderRadius: '24px',
+    px: 3,
+    py: 1.25,
+    fontWeight: 600,
+    textTransform: 'none',
+    boxShadow: '0 4px 8px rgba(0, 86, 179, 0.3)',
+  }}
+>
+  {isOpen ? <ExpandLess /> : <ExpandMore />}
+  {isOpen ? 'Hide Menu' : 'Show Menu'}
+</Button>
 
       {isOpen && (
         <>
@@ -238,18 +238,38 @@ const DataMenu = () => {
 
       {isOpen && (
         <>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
-            {filteredData.map((row) => (
-              <DataRow
-                key={row.id}
-                row={row}
-                visibilityMap={visibilityMap}
-                handleCheckboxSelection={handleCheckboxSelection}
-                handleCheckboxChange={handleCheckboxChange}
-                deleteRow={deleteRow}
-              />
-            ))}
-          </Box>
+        <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
+  {filteredData.length > 0 ? (
+    filteredData.map((row) => (
+      <DataRow
+        key={row.id}
+        row={row}
+        visibilityMap={visibilityMap}
+        handleCheckboxSelection={handleCheckboxSelection}
+        handleCheckboxChange={handleCheckboxChange}
+        deleteRow={deleteRow}
+      />
+    ))
+  ) : (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'text.secondary',
+        mt: 4,
+        userSelect: 'none',
+      }}
+    >
+      <SearchOffIcon sx={{ fontSize: 48, mb: 1, color: 'primary.main' }} />
+  <Box sx={{ mb: 3, fontWeight: 500, fontSize: '1.1rem', color: 'primary.main' }}>
+    No results found
+  </Box>
+    </Box>
+  )}
+</Box>
 
           <Divider />
 
@@ -264,13 +284,7 @@ const DataMenu = () => {
           >
             <AddItemDialog onAdd={handleAddItem} />
 
-            <IconButton
-              sx={{ color: selectedFeature ? 'red' : 'gray' }}
-              disabled={!selectedFeature}
-              onClick={handleDeleteSelectedFeature}
-            >
-              <DeleteIcon />
-            </IconButton>
+       
 
             <Tooltip title={geoTiffVisible ? 'Hide GeoTIFF Layer' : 'Show GeoTIFF Layer'}>
               <IconButton
@@ -286,7 +300,6 @@ const DataMenu = () => {
         </>
       )}
 
-      {/* Snackbar notification */}
       <SnackbarNotification
         open={openSnackbar}
         message={snackbarMessage}
