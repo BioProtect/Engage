@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Box, Divider, IconButton, Tooltip, Button } from '@mui/material';
-import { useMapContext } from '../../Contexts/MapContext';
+import { Box, Button, Divider, IconButton, Tooltip } from '@mui/material';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
+
 import AddItemDialog from './AddItemDialog';
 import CategoryTabs from './CategoryTabs';
-import SortSelect from './SortSelect';
 import DataRow from './DataRow';
 import FinishSessionButton from './FinishButton';
-import SearchField from './Search';
 import LayersIcon from '@mui/icons-material/Layers';
-import { ExpandMore, ExpandLess } from '@mui/icons-material';
-import SnackbarNotification from './SnackbarNotification'; 
+import SearchField from './Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
-
+import SnackbarNotification from './SnackbarNotification';
+import SortSelect from './SortSelect';
+import { useMapContext } from '../../Contexts/MapContext';
+import { useState } from 'react';
 
 const DataMenu = () => {
   const [isOpen, setIsOpen] = useState(true);
@@ -120,8 +120,8 @@ const DataMenu = () => {
 
   const stickyRow = activeDrawingRow
     ? Object.values(data)
-        .flat()
-        .find((row) => row.id === activeDrawingRow)
+      .flat()
+      .find((row) => row.id === activeDrawingRow)
     : null;
 
   const handleAddItem = (item) => {
@@ -140,7 +140,7 @@ const DataMenu = () => {
   const handleFinishSession = () => {
     setActiveDrawingRow(null);
     map.removeInteraction(drawRef.current);
-  
+
     drawnFeatures.forEach((feature) => {
       const featureId = feature.get('id');
       handleCheckboxChange(featureId, false);
@@ -161,18 +161,24 @@ const DataMenu = () => {
   };
 
   return (
-    <div
-      style={{
-        width: '370px',
+    <Box
+      sx={{
         position: 'absolute',
-        top: '10px',
-        left: '10px',
-        backgroundColor: 'white',
-        padding: '16px',
-        borderRadius: '8px',
-        boxShadow: '0px 0px 15px rgba(0,0,0,0.1)',
+        top: { xs: 1, sm: 5, lg: 10 },         // theme.spacing(1) = 8px
+        left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-        maxHeight: isOpen ? '600px' : stickyRow ? '170px' : '60px',
+
+        bgcolor: 'background.paper',
+        p: 2,
+        borderRadius: 2,
+        boxShadow: 3,
+
+        /* fluid width: 90% on xs, 370px on sm+ */
+        width: { xs: '60vw', sm: '45vw', md: '40vw', lg: '370px' },
+        maxWidth: 370,
+
+        /* maxHeight + transition copied from your inline style */
+        maxHeight: isOpen ? 600 : stickyRow ? 170 : 60,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -181,26 +187,26 @@ const DataMenu = () => {
     >
 
 
-<Button
-  onClick={toggleOpen}
-  variant="contained"
-  color="primary"
-  sx={{
-    mb: 2,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 1,
-    borderRadius: '24px',
-    px: 3,
-    py: 1.25,
-    fontWeight: 600,
-    textTransform: 'none',
-    boxShadow: '0 4px 8px rgba(0, 86, 179, 0.3)',
-  }}
->
-  {isOpen ? <ExpandLess /> : <ExpandMore />}
-  {isOpen ? 'Hide Menu' : 'Show Menu'}
-</Button>
+      <Button
+        onClick={toggleOpen}
+        variant="contained"
+        color="primary"
+        sx={{
+          mb: 2,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1,
+          borderRadius: '24px',
+          px: 3,
+          py: 1.25,
+          fontWeight: 600,
+          textTransform: 'none',
+          boxShadow: '0 4px 8px rgba(0, 86, 179, 0.3)',
+        }}
+      >
+        {isOpen ? <ExpandLess /> : <ExpandMore />}
+        {isOpen ? 'Hide Menu' : 'Show Menu'}
+      </Button>
 
       {isOpen && (
         <>
@@ -238,38 +244,38 @@ const DataMenu = () => {
 
       {isOpen && (
         <>
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
-  {filteredData.length > 0 ? (
-    filteredData.map((row) => (
-      <DataRow
-        key={row.id}
-        row={row}
-        visibilityMap={visibilityMap}
-        handleCheckboxSelection={handleCheckboxSelection}
-        handleCheckboxChange={handleCheckboxChange}
-        deleteRow={deleteRow}
-      />
-    ))
-  ) : (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'text.secondary',
-        mt: 4,
-        userSelect: 'none',
-      }}
-    >
-      <SearchOffIcon sx={{ fontSize: 48, mb: 1, color: 'primary.main' }} />
-  <Box sx={{ mb: 3, fontWeight: 500, fontSize: '1.1rem', color: 'primary.main' }}>
-    No results found
-  </Box>
-    </Box>
-  )}
-</Box>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
+            {filteredData.length > 0 ? (
+              filteredData.map((row) => (
+                <DataRow
+                  key={row.id}
+                  row={row}
+                  visibilityMap={visibilityMap}
+                  handleCheckboxSelection={handleCheckboxSelection}
+                  handleCheckboxChange={handleCheckboxChange}
+                  deleteRow={deleteRow}
+                />
+              ))
+            ) : (
+              <Box
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'text.secondary',
+                  mt: 4,
+                  userSelect: 'none',
+                }}
+              >
+                <SearchOffIcon sx={{ fontSize: 48, mb: 1, color: 'primary.main' }} />
+                <Box sx={{ mb: 3, fontWeight: 500, fontSize: '1.1rem', color: 'primary.main' }}>
+                  No results found
+                </Box>
+              </Box>
+            )}
+          </Box>
 
           <Divider />
 
@@ -283,8 +289,6 @@ const DataMenu = () => {
             }}
           >
             <AddItemDialog onAdd={handleAddItem} />
-
-       
 
             <Tooltip title={geoTiffVisible ? 'Hide GeoTIFF Layer' : 'Show GeoTIFF Layer'}>
               <IconButton
@@ -305,7 +309,7 @@ const DataMenu = () => {
         message={snackbarMessage}
         onClose={handleSnackbarClose}
       />
-    </div>
+    </Box>
   );
 };
 

@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState, memo } from 'react';
-import ReactDOM from 'react-dom/client';
+import { Fill, Stroke, Style, Text } from 'ol/style';
+import { IconButton, Tooltip } from '@mui/material';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+
 import Draw from 'ol/interaction/Draw.js';
-import Select from 'ol/interaction/Select';
-import Overlay from 'ol/Overlay';
-import { Style, Fill, Stroke, Text } from 'ol/style';
-import { click } from 'ol/events/condition';
 import EditIcon from '@mui/icons-material/Edit';
-import StopIcon from '@mui/icons-material/Stop';
-import { IconButton, Tooltip, Slider, Typography, Box, Stack,  Divider } from '@mui/material';
-import { useMapContext } from '../../Contexts/MapContext';
+import Overlay from 'ol/Overlay';
 import PopupContent from '../DataMenuComponents/PopupContent';
+import ReactDOM from 'react-dom/client';
+import Select from 'ol/interaction/Select';
+import StopIcon from '@mui/icons-material/Stop';
+import { click } from 'ol/events/condition';
+import { useMapContext } from '../../Contexts/MapContext';
 
 const allOverlays = [];
 
@@ -152,12 +153,13 @@ const DrawingComponent = ({
     });
   }, [visible, rowColor, drawnFeatures, rowId, vectorSource, name, map, selectedFeature, selectedColor]);
 
-  const handleDelete = () => {
+
+  const handleDelete = useCallback(() => {
     if (!selectedFeature) return;
     vectorSource.removeFeature(selectedFeature);
     setDrawnFeatures((prev) => prev.filter((feature) => feature !== selectedFeature));
     setSelectedFeature(null);
-  };
+  }, [selectedFeature, vectorSource, setDrawnFeatures, setSelectedFeature]);
 
   // Reset density and description when selectedFeature changes (popup opens)
   useEffect(() => {
@@ -246,7 +248,7 @@ const DrawingComponent = ({
         }
       }
     }
-  }, [selectedFeature, visible, rowId, map, name, handleDelete, density, description]);
+  }, [selectedFeature, setSelectedFeature, visible, rowId, map, name, handleDelete, density, description]);
 
   const toggleDrawing = () => {
     if (drawRef.current) {
