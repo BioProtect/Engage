@@ -1,59 +1,83 @@
-import { Box, Button, Divider, IconButton, Tooltip } from '@mui/material';
-import { ExpandLess, ExpandMore } from '@mui/icons-material';
+import { useState, useEffect } from "react";
+import { Box, Button, Divider, IconButton, Tooltip } from "@mui/material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import LayersIcon from "@mui/icons-material/Layers";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 
-import AddItemDialog from './AddItemDialog';
-import CategoryTabs from './CategoryTabs';
-import DataRow from './DataRow';
-import FinishSessionButton from './FinishButton';
-import LayersIcon from '@mui/icons-material/Layers';
-import SearchField from './Search';
-import SearchOffIcon from '@mui/icons-material/SearchOff';
-import SnackbarNotification from './SnackbarNotification';
-import SortSelect from './SortSelect';
-import { useMapContext } from '../../Contexts/MapContext';
-import { useState } from 'react';
+import AddItemDialog from "./AddItemDialog";
+import CategoryTabs from "./CategoryTabs";
+import DataRow from "./DataRow";
+import FinishSessionButton from "./FinishButton";
+import SearchField from "./Search";
+import SortSelect from "./SortSelect";
+import { useMapContext } from "../../Contexts/MapContext";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import UserInfo from "../Authentication/UserInfo";
+import { get_drawing_items } from "../../Api/DataMenuApi";
+import CircularProgress from "@mui/material/CircularProgress";
+import { Typography } from "@mui/material";
 
 const DataMenu = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState({
+    Features: [],
+    Activities: [],
+  });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedData = await get_drawing_items();
+
+      const transform = (arr) =>
+        arr.map(({ id, name, description, color, type }) => ({
+          id,
+          name,
+          description,
+          color,
+          type,
+        }));
+
+      const formattedData = {
+        Features: transform(fetchedData.Features || []),
+        Activities: transform(fetchedData.Activities || []),
+      };
+
+      setData(formattedData);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   const [isOpen, setIsOpen] = useState(true);
   const toggleOpen = () => setIsOpen((prev) => !prev);
 
-  const [data, setData] = useState({
-    Features: [
-      { id: 1, Name: 'Coral Reef', color: '#FF6666', description: 'A diverse underwater ecosystem found in warm ocean waters.' },
-      { id: 2, Name: 'Fresh Water', color: '#8A2BE2', description: 'A habitat of rivers, lakes, and ponds that are low in salt content.' },
-      { id: 3, Name: 'Kelp Forest', color: '#32CD32', description: 'A coastal underwater forest of giant kelp plants, home to many species.' },
-      { id: 4, Name: 'Open Ocean', color: '#1E90FF', description: 'The vast, deep waters of the ocean away from the coast.' },
-      { id: 5, Name: 'Salt Marsh', color: '#D2691E', description: 'A coastal ecosystem of salt-tolerant plants and tidal waters.' },
-    ],
-    Activities: [
-      { id: 10, Name: 'Overfishing', color: '#FF4500', description: 'The depletion of fish species due to excessive fishing.' },
-      { id: 11, Name: 'Pollution', color: '#2E8B57', description: 'The introduction of harmful substances into the environment.' },
-      { id: 12, Name: 'Rain', color: '#4169E1', description: 'Precipitation in the form of water droplets falling from the sky.' },
-      { id: 13, Name: 'Wind', color: '#FFD700', description: 'The movement of air from high to low pressure areas.' },
-    ],
-  });
-
-  const categoryList = ['Features', 'Activities'];
+  const categoryList = ["Features", "Activities"];
   const [selectedCategory, setSelectedCategory] = useState(categoryList[0]);
-  const handleCategoryChange = (category) => setSelectedCategory(category);
-
-  const [sortOption, setSortOption] = useState('Name');
-  const handleSortChange = (event) => setSortOption(event.target.value);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const handleSearchChange = (event) => setSearchQuery(event.target.value);
+  const [sortOption, setSortOption] = useState("Name");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     activeDrawingRow,
-    selectedFeature,
-    setSelectedFeature,
     drawnFeatures,
-    setDrawnFeatures,
-    vectorSource,
     geoTiffLayer,
     map,
     drawRef,
-    setActiveDrawingRow
+    vectorSource,
+    setDrawnFeatures,
+    setSelectedFeature,
+    setActiveDrawingRow,
+    visibilityMap,
+    handleCheckboxChange,
+    showSnackbar,
   } = useMapContext();
 
   const [geoTiffVisible, setGeoTiffVisible] = useState(true);
@@ -64,13 +88,18 @@ const DataMenu = () => {
     }
   };
 
-  const [visibilityMap, setVisibilityMap] = useState({});
-  const handleCheckboxSelection = (id) => {
-    setVisibilityMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  const clearAllDrawings = () => {
+    drawnFeatures.forEach((feature) => {
+      vectorSource.removeFeature(feature);
+      const featureId = feature.get("id");
+      handleCheckboxChange(featureId, false);
+    });
+
+    setDrawnFeatures([]);
+    setActiveDrawingRow(null);
     setSelectedFeature(null);
+    showSnackbar("All drawings cleared!");
   };
-  const handleCheckboxChange = (id, isVisible) =>
-    setVisibilityMap((prev) => ({ ...prev, [id]: isVisible }));
 
   const deleteRow = (rowId) => {
     const newData = { ...data };
@@ -79,39 +108,88 @@ const DataMenu = () => {
     });
     setData(newData);
     map.removeInteraction(drawRef.current);
-    handleSnackbarOpen('Row deleted successfully!');
+  };
+
+  const [allSelected, setAllSelected] = useState(false);
+
+  const handleSelectAllToggle = () => {
+    if (!allSelected) {
+      Object.values(data)
+        .flat()
+        .filter((item) => {
+          const hasDrawings = drawnFeatures.some(
+            (feature) => feature.get("id") === item.id
+          );
+          return hasDrawings && item.id !== activeDrawingRow;
+        })
+        .forEach((item) => {
+          handleCheckboxChange(item.id, true);
+        });
+    } else {
+      Object.values(data)
+        .flat()
+        .filter((item) => {
+          const hasDrawings = drawnFeatures.some(
+            (feature) => feature.get("id") === item.id
+          );
+          return hasDrawings && item.id !== activeDrawingRow;
+        })
+        .forEach((item) => {
+          handleCheckboxChange(item.id, false);
+        });
+    }
+    setAllSelected(!allSelected);
+  };
+
+  const handleAddItem = async (item) => {
+    try {
+      await loadData();
+      showSnackbar(item.name + " was sucessfully added!");
+    } catch (error) {
+      console.error("Failed to add item or refresh data:", error);
+    }
+  };
+
+  const handleFinishSession = () => {
+    setActiveDrawingRow(null);
+    drawRef.current?.setActive(false);
+
+    drawnFeatures.forEach((feature) => {
+      const featureId = feature.get("id");
+      handleCheckboxChange(featureId, false);
+    });
   };
 
   const filteredData = data[selectedCategory]
     .filter(
       (row) =>
-        row.Name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        row.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
         row.id !== activeDrawingRow
     )
     .sort((a, b) => {
       switch (sortOption) {
-        case 'Name':
-          return a.Name.localeCompare(b.Name);
-        case 'Color':
+        case "Name":
+          return a.name.localeCompare(b.name);
+        case "Color":
           return a.color.localeCompare(b.color);
-        case 'Active': {
+        case "Active": {
           const aVisible = visibilityMap[a.id] ?? false;
           const bVisible = visibilityMap[b.id] ?? false;
           return bVisible - aVisible;
         }
-        case 'Inactive': {
+        case "Inactive": {
           const aVisible = visibilityMap[a.id] ?? false;
           const bVisible = visibilityMap[b.id] ?? false;
           return aVisible - bVisible;
         }
-        case 'Drawings': {
-          const aDrawingCount = drawnFeatures.filter(
-            (f) => f.get('id') === a.id
+        case "Drawings": {
+          const aCount = drawnFeatures.filter(
+            (f) => f.get("id") === a.id
           ).length;
-          const bDrawingCount = drawnFeatures.filter(
-            (f) => f.get('id') === b.id
+          const bCount = drawnFeatures.filter(
+            (f) => f.get("id") === b.id
           ).length;
-          return bDrawingCount - aDrawingCount;
+          return bCount - aCount;
         }
         default:
           return 0;
@@ -120,157 +198,134 @@ const DataMenu = () => {
 
   const stickyRow = activeDrawingRow
     ? Object.values(data)
-      .flat()
-      .find((row) => row.id === activeDrawingRow)
+        .flat()
+        .find((row) => row.id === activeDrawingRow)
     : null;
-
-  const handleAddItem = (item) => {
-    const newId = Math.max(...data[item.Category].map((i) => i.id)) + 1;
-    const newData = {
-      ...data,
-      [item.Category]: [
-        ...data[item.Category],
-        { ...item, id: newId, color: item.Color || '#000000' },
-      ],
-    };
-    setData(newData);
-    handleSnackbarOpen('Item added successfully!');
-  };
-
-  const handleFinishSession = () => {
-    setActiveDrawingRow(null);
-    map.removeInteraction(drawRef.current);
-
-    drawnFeatures.forEach((feature) => {
-      const featureId = feature.get('id');
-      handleCheckboxChange(featureId, false);
-    });
-    handleSnackbarOpen('Session sucessfully saved!');
-  };
-
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-
-  const handleSnackbarOpen = (message) => {
-    setSnackbarMessage(message);
-    setOpenSnackbar(true);
-  };
-
-  const handleSnackbarClose = () => {
-    setOpenSnackbar(false);
-  };
 
   return (
     <Box
       sx={{
-        position: 'absolute',
-        top: { xs: 1, sm: 5, lg: 10 },         // theme.spacing(1) = 8px
+        position: "absolute",
+        top: { xs: 1, sm: 5, lg: 10 },
         left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-
-        bgcolor: 'background.paper',
+        bgcolor: "background.paper",
         p: 2,
         borderRadius: 2,
         boxShadow: 3,
-
-        /* fluid width: 90% on xs, 370px on sm+ */
-        width: { xs: '60vw', sm: '45vw', md: '40vw', lg: '370px' },
+        width: { xs: "60vw", sm: "45vw", md: "40vw", lg: "370px" },
         maxWidth: 370,
-
-        /* maxHeight + transition copied from your inline style */
         maxHeight: isOpen ? 600 : stickyRow ? 170 : 60,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'max-height 0.4s ease',
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        transition: "max-height 0.4s ease",
       }}
     >
-
-
       <Button
         onClick={toggleOpen}
         variant="contained"
         color="primary"
         sx={{
           mb: 2,
-          display: 'inline-flex',
-          alignItems: 'center',
+          display: "inline-flex",
+          alignItems: "center",
           gap: 1,
-          borderRadius: '24px',
+          borderRadius: "24px",
           px: 3,
           py: 1.25,
           fontWeight: 600,
-          textTransform: 'none',
-          boxShadow: '0 4px 8px rgba(0, 86, 179, 0.3)',
+          textTransform: "none",
+          boxShadow: "0 4px 8px rgba(0, 86, 179, 0.3)",
         }}
       >
         {isOpen ? <ExpandLess /> : <ExpandMore />}
-        {isOpen ? 'Hide Menu' : 'Show Menu'}
+        {isOpen ? "Hide Menu" : "Show Menu"}
       </Button>
 
       {isOpen && (
         <>
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               marginBottom: 2,
-              justifyContent: 'space-between',
+              justifyContent: "space-between",
             }}
           >
             <CategoryTabs
               categories={categoryList}
               selectedCategory={selectedCategory}
-              onSelect={handleCategoryChange}
+              onSelect={setSelectedCategory}
             />
-            <SortSelect sortOption={sortOption} onChange={handleSortChange} />
+            <SortSelect
+              sortOption={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+            />
           </Box>
 
-          <SearchField searchQuery={searchQuery} onSearchChange={handleSearchChange} />
+          <SearchField
+            searchQuery={searchQuery}
+            onSearchChange={(e) => setSearchQuery(e.target.value)}
+          />
         </>
       )}
 
       {stickyRow && (
         <Box sx={{ marginBottom: 2 }}>
-          <DataRow
-            row={stickyRow}
-            visibilityMap={visibilityMap}
-            handleCheckboxSelection={handleCheckboxSelection}
-            handleCheckboxChange={handleCheckboxChange}
-            deleteRow={deleteRow}
-          />
+          <DataRow row={stickyRow} deleteRow={deleteRow} />
         </Box>
       )}
 
       {isOpen && (
         <>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', paddingRight: 1 }}>
-            {filteredData.length > 0 ? (
+          <Box sx={{ flexGrow: 1, overflowY: "auto", paddingRight: 1 }}>
+            {isLoading ? (
+              <Box
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  color: "text.secondary",
+                  py: 5,
+                }}
+              >
+                <CircularProgress color="primary" size={40} thickness={4} />
+                <Typography variant="body1" sx={{ mt: 2, fontWeight: 500 }}>
+                  Loading data...
+                </Typography>
+              </Box>
+            ) : filteredData.length > 0 ? (
               filteredData.map((row) => (
-                <DataRow
-                  key={row.id}
-                  row={row}
-                  visibilityMap={visibilityMap}
-                  handleCheckboxSelection={handleCheckboxSelection}
-                  handleCheckboxChange={handleCheckboxChange}
-                  deleteRow={deleteRow}
-                />
+                <DataRow key={row.id} row={row} deleteRow={deleteRow} />
               ))
             ) : (
               <Box
                 sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'text.secondary',
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "text.secondary",
                   mt: 4,
-                  userSelect: 'none',
+                  userSelect: "none",
                 }}
               >
-                <SearchOffIcon sx={{ fontSize: 48, mb: 1, color: 'primary.main' }} />
-                <Box sx={{ mb: 3, fontWeight: 500, fontSize: '1.1rem', color: 'primary.main' }}>
+                <SearchOffIcon
+                  sx={{ fontSize: 48, mb: 1, color: "primary.main" }}
+                />
+                <Box
+                  sx={{
+                    mb: 3,
+                    fontWeight: 500,
+                    fontSize: "1.1rem",
+                    color: "primary.main",
+                  }}
+                >
                   No results found
                 </Box>
               </Box>
@@ -282,33 +337,192 @@ const DataMenu = () => {
           <Box
             sx={{
               marginTop: 3,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              bgcolor: "background.paper",
+              p: 2,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "divider",
+              userSelect: "none",
             }}
           >
+            <Tooltip
+              title={
+                allSelected ? "Deselect All Drawings" : "Select All Drawings"
+              }
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+                onClick={handleSelectAllToggle}
+                aria-label={
+                  allSelected ? "Deselect All Drawings" : "Select All Drawings"
+                }
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    handleSelectAllToggle();
+                }}
+              >
+                <IconButton
+                  size="large"
+                  sx={{
+                    color: allSelected ? "primary.main" : "grey.700",
+                    fontSize: 28,
+                    p: 0,
+                  }}
+                  disableRipple
+                >
+                  {allSelected ? (
+                    <CheckBoxIcon fontSize="inherit" />
+                  ) : (
+                    <CheckBoxOutlineBlankIcon fontSize="inherit" />
+                  )}
+                </IconButton>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    fontFamily:
+                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    color: "text.primary",
+                    mt: 0.5,
+                    letterSpacing: 0.15,
+                    userSelect: "none",
+                    lineHeight: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    height: 16,
+                  }}
+                >
+                  {allSelected ? "Deselect All" : "Select All"}
+                </Box>
+              </Box>
+            </Tooltip>
+
+            <Tooltip
+              title={
+                geoTiffVisible ? "Hide GeoTIFF Layer" : "Show GeoTIFF Layer"
+              }
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  userSelect: "none",
+                }}
+                onClick={toggleGeoTiffLayer}
+                aria-label={
+                  geoTiffVisible ? "Hide GeoTIFF Layer" : "Show GeoTIFF Layer"
+                }
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") toggleGeoTiffLayer();
+                }}
+              >
+                <IconButton
+                  size="large"
+                  sx={{
+                    color: geoTiffVisible ? "success.main" : "grey.700",
+                    fontSize: 28,
+                    p: 0,
+                  }}
+                  disableRipple
+                >
+                  <LayersIcon fontSize="inherit" />
+                </IconButton>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    fontFamily:
+                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    color: "text.primary",
+                    mt: 0.5,
+                    letterSpacing: 0.15,
+                    userSelect: "none",
+                    lineHeight: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    height: 16,
+                  }}
+                >
+                  GeoTIFF
+                </Box>
+              </Box>
+            </Tooltip>
+
             <AddItemDialog onAdd={handleAddItem} />
 
-            <Tooltip title={geoTiffVisible ? 'Hide GeoTIFF Layer' : 'Show GeoTIFF Layer'}>
-              <IconButton
-                sx={{ color: geoTiffVisible ? 'green' : 'gray' }}
-                onClick={toggleGeoTiffLayer}
+            <Tooltip title="Clear All Drawings">
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  userSelect: "none",
+                }}
+                aria-label="Clear All Drawings"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (
+                    (e.key === "Enter" || e.key === " ") &&
+                    drawnFeatures.length > 0
+                  )
+                    clearAllDrawings();
+                }}
               >
-                <LayersIcon />
-              </IconButton>
+                <IconButton
+                  disabled={drawnFeatures.length === 0}
+                  size="large"
+                  sx={{
+                    color: drawnFeatures.length > 0 ? "error.main" : "grey.400",
+                    fontSize: 28,
+                    p: 0,
+                  }}
+                  disableRipple
+                  onClick={clearAllDrawings}
+                >
+                  <DeleteSweepIcon fontSize="inherit" />
+                </IconButton>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    fontFamily:
+                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    color: drawnFeatures.length > 0 ? "error.main" : "grey.400",
+                    mt: 0.5,
+                    letterSpacing: 0.15,
+                    userSelect: "none",
+                    lineHeight: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    height: 16,
+                  }}
+                >
+                  Clear Drawings
+                </Box>
+              </Box>
             </Tooltip>
           </Box>
 
           <FinishSessionButton onFinish={handleFinishSession} />
+          <UserInfo></UserInfo>
         </>
       )}
-
-      <SnackbarNotification
-        open={openSnackbar}
-        message={snackbarMessage}
-        onClose={handleSnackbarClose}
-      />
     </Box>
   );
 };

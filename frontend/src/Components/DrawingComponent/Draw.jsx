@@ -1,330 +1,546 @@
-import { Fill, Stroke, Style, Text } from 'ol/style';
-import { IconButton, Tooltip } from '@mui/material';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-
-import Draw from 'ol/interaction/Draw.js';
-import EditIcon from '@mui/icons-material/Edit';
-import Overlay from 'ol/Overlay';
-import PopupContent from '../DataMenuComponents/PopupContent';
-import ReactDOM from 'react-dom/client';
-import Select from 'ol/interaction/Select';
-import StopIcon from '@mui/icons-material/Stop';
-import { click } from 'ol/events/condition';
-import { useMapContext } from '../../Contexts/MapContext';
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import ReactDOM from "react-dom/client";
+import { Fill, Stroke, Style, Text } from "ol/style";
+import Draw from "ol/interaction/Draw";
+import Select from "ol/interaction/Select";
+import Overlay from "ol/Overlay";
+import { singleClick } from "ol/events/condition";
+import { useMapContext } from "../../Contexts/MapContext";
+import PopupContent from "../DataMenuComponents/PopupContent";
+import { getArea } from "ol/sphere";
 
 const allOverlays = [];
 
-const DrawingComponent = ({
-  name,
-  rowId,
-  isActive,
-  rowColor,
-  visible,
-  handleCheckboxChange,
+const formatArea = (polygon) => {
+  const geom3857 = polygon.clone().transform("EPSG:4326", "EPSG:3857");
+  const area = getArea(geom3857);
+  const nf = new Intl.NumberFormat();
+
+  return area > 1e6
+    ? `${nf.format((area / 1e6).toFixed(2))} km²`
+    : `${nf.format(area.toFixed(0))} m²`;
+};
+
+const tooltipStyle = {
+  position: "absolute",
+  background: "rgba(30, 144, 255, 0.6)",
+  borderRadius: 4,
+  color: "white",
+  padding: "4px 8px",
+  whiteSpace: "nowrap",
+  fontSize: 12,
+  fontWeight: "500",
+  pointerEvents: "none",
+  userSelect: "none",
+  transform: "translate(-50%, -100%)",
+  opacity: 0.8,
+  boxShadow: "0 0 4px rgba(30, 144, 255, 0.5)",
+  textShadow: "none",
+  zIndex: 1000,
+  lineHeight: 1,
+  fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif',
+};
+
+const styleCache = {};
+
+const createFeatureStyle = (feature, map) => {
+  const color = feature.get("color") || "#000";
+  const name = feature.get("name") || "";
+  const geometry = feature.getGeometry();
+  if (!geometry) return null;
+
+  const zoom = Math.round(map.getView().getZoom());
+  const cacheKey = `${feature.getId() || name}-${zoom}`;
+
+  if (styleCache[cacheKey]) return styleCache[cacheKey];
+
+  const coords = geometry.getCoordinates()[0];
+  const pixelCoords = coords.map((c) => map.getPixelFromCoordinate(c));
+  const xs = pixelCoords.map((p) => p[0]);
+  const ys = pixelCoords.map((p) => p[1]);
+
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  const boxWidth = maxX - minX;
+  const boxHeight = maxY - minY;
+
+  const paddingX = Math.max(boxWidth * 0.25, 16);
+  const paddingY = Math.max(boxHeight * 0.25, 16);
+
+  const maxTextWidth = boxWidth - 2 * paddingX;
+  const maxTextHeight = boxHeight - 2 * paddingY;
+
+  if (maxTextWidth <= 0 || maxTextHeight <= 0) {
+    const style = new Style({
+      fill: new Fill({ color: `${color}33` }),
+      stroke: new Stroke({ color, width: 3, lineDash: [6, 4] }),
+    });
+    styleCache[cacheKey] = style;
+    return style;
+  }
+
+  const ctx =
+    createFeatureStyle._ctx ||
+    (createFeatureStyle._ctx = document
+      .createElement("canvas")
+      .getContext("2d"));
+
+  const MIN_FONT_SIZE = 6;
+  const MAX_FONT_SIZE = 12;
+  let fontSize = Math.min(
+    MAX_FONT_SIZE,
+    Math.max(MIN_FONT_SIZE, maxTextHeight * 0.5)
+  );
+
+  ctx.font = `bold ${fontSize}px Roboto, sans-serif`;
+
+  const labelGeometry = geometry.getInteriorPoint
+    ? geometry.getInteriorPoint()
+    : {
+        getCoordinates: () => {
+          const ext = geometry.getExtent();
+          return [(ext[0] + ext[2]) / 2, (ext[1] + ext[3]) / 2];
+        },
+      };
+
+  const style = new Style({
+    fill: new Fill({ color: `${color}33` }),
+    stroke: new Stroke({ color, width: 3, lineDash: [6, 4] }),
+    text: new Text({
+      text: name,
+      font: `bold ${fontSize}px "Roboto", sans-serif`,
+      fill: new Fill({ color: "#fff" }),
+      stroke: new Stroke({ color: "#000", width: 4 }),
+      placement: "point",
+      geometry: labelGeometry,
+      overflow: true,
+    }),
+    zIndex: 10,
+  });
+
+  styleCache[cacheKey] = style;
+  return style;
+};
+
+const usePopupOverlay = ({
+  map,
+  selectedFeature,
+  density,
+  description,
+  setDensity,
+  setDescription,
+  setSelectedFeature,
+  handleDelete,
+  visibilityMap,
+  activeDrawingRow,
+  selectRef,
 }) => {
-  const {
-    map,
-    vectorSource,
-    drawnFeatures,
-    setDrawnFeatures,
-    drawRef,
-    setActiveDrawingRow,
-    activeDrawingRow,
-    setSelectedFeature,
-    selectedFeature,
-  } = useMapContext();
-  const selectRef = useRef(null);
   const overlayRef = useRef(null);
   const rootRef = useRef(null);
-  const [density, setDensity] = useState(0);
-  const [description, setDescription] = useState(''); // New description state
-
-  const createFeatureStyle = (
-    color,
-    visible,
-    feature,
-    featureName,
-    mapInstance,
-    selected = false,
-    selectedColor = null
-  ) => {
-    const baseFontSize = 20;
-    let fontSize = baseFontSize;
-    let textGeometry = null;
-
-    if (
-      feature &&
-      feature.getGeometry() &&
-      feature.getGeometry().getType() === 'Polygon' &&
-      featureName &&
-      mapInstance
-    ) {
-      const geom = feature.getGeometry();
-      textGeometry = geom.getInteriorPoint();
-
-      const coords = geom.getCoordinates()[0];
-      const pixelCoords = coords.map((coord) => mapInstance.getPixelFromCoordinate(coord));
-
-      let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-      pixelCoords.forEach(([x, y]) => {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-      });
-
-      const boxWidth = maxX - minX;
-      const boxHeight = maxY - minY;
-
-      const estimatedTextWidth = (text) => text.length * fontSize * 0.6;
-
-      while (
-        (estimatedTextWidth(featureName) > boxWidth || fontSize > boxHeight) &&
-        fontSize > 8
-      ) {
-        fontSize -= 1;
-      }
-    }
-
-    const fillColor = visible
-      ? selected && selectedColor
-        ? selectedColor + '33'
-        : color + '33'
-      : 'transparent';
-
-    const strokeColor = visible
-      ? selected && selectedColor
-        ? selectedColor
-        : color
-      : 'transparent';
-
-    return new Style({
-      fill: new Fill({
-        color: fillColor,
-      }),
-      stroke: new Stroke({
-        color: strokeColor,
-        width: 4,
-        lineDash: [6, 4],
-      }),
-      text: new Text({
-        text: visible ? featureName : '',
-        font: `${fontSize}px "Roboto", sans-serif`,
-        fill: new Fill({ color: '#fff' }),
-        stroke: new Stroke({ color: '#000', width: 3 }),
-        overflow: true,
-        placement: 'point',
-        geometry: textGeometry,
-      }),
-      zIndex: 10,
-    });
-  };
-
-  const selectedColor = '#0FA5EA';
-
-  useEffect(() => {
-    drawnFeatures.forEach((feature) => {
-      if (feature.get('id') === rowId) {
-        if (visible) {
-          if (!vectorSource.hasFeature(feature)) {
-            vectorSource.addFeature(feature);
-          }
-          const isSelected = selectedFeature === feature;
-          feature.setStyle(
-            createFeatureStyle(
-              rowColor,
-              visible,
-              feature,
-              name,
-              map,
-              isSelected,
-              selectedColor
-            )
-          );
-        } else {
-          if (vectorSource.hasFeature(feature)) {
-            vectorSource.removeFeature(feature);
-          }
-        }
-      }
-    });
-  }, [visible, rowColor, drawnFeatures, rowId, vectorSource, name, map, selectedFeature, selectedColor]);
-
-
-  const handleDelete = useCallback(() => {
-    if (!selectedFeature) return;
-    vectorSource.removeFeature(selectedFeature);
-    setDrawnFeatures((prev) => prev.filter((feature) => feature !== selectedFeature));
-    setSelectedFeature(null);
-  }, [selectedFeature, vectorSource, setDrawnFeatures, setSelectedFeature]);
-
-  // Reset density and description when selectedFeature changes (popup opens)
-  useEffect(() => {
-    if (selectedFeature && selectedFeature.get('id') === rowId) {
-      const featureDensity = selectedFeature.get('density') ?? 0;
-      setDensity(featureDensity);
-
-      const featureDescription = selectedFeature.get('description') ?? '';
-      setDescription(featureDescription);
-    }
-  }, [selectedFeature, rowId]);
+  const { showSnackbar } = useMapContext();
 
   useEffect(() => {
     if (!map) return;
 
-    if (selectedFeature && selectedFeature.get('id') === rowId && visible) {
-      const geom = selectedFeature.getGeometry();
-      let coordinates;
-
-      if (geom.getType() === 'Polygon') {
-        const coords = geom.getCoordinates()[0];
-        coordinates = coords.reduce((top, point) => (point[1] > top[1] ? point : top), coords[0]);
-      } else {
-        coordinates = geom.getInteriorPoint
-          ? geom.getInteriorPoint().getCoordinates()
-          : geom.getCoordinates()[0][0];
-      }
-
-      if (!overlayRef.current) {
-        allOverlays.forEach(({ overlay, root }) => {
-          map.removeOverlay(overlay);
-          if (root) root.unmount();
-        });
-        allOverlays.length = 0;
-
-        const container = document.createElement('div');
-        rootRef.current = ReactDOM.createRoot(container);
-
-        const overlay = new Overlay({
-          element: container,
-          position: coordinates,
-          positioning: 'bottom-center',
-          offset: [0, -8],
-          stopEvent: true,
-        });
-
-        map.addOverlay(overlay);
-        overlayRef.current = overlay;
-
-        allOverlays.push({ overlay, root: rootRef.current });
-      } else {
-        overlayRef.current.setPosition(coordinates);
-      }
-
-      rootRef.current.render(
-        <PopupContent
-          density={density}
-          description={description}
-          drawingName={name}
-          onChange={(e, val) => {
-            setDensity(val);
-          }}
-          onDescriptionChange={(val) => {
-            setDescription(val);
-          }}
-          onSave={() => {
-            if (selectedFeature) {
-              selectedFeature.set('density', density);
-              selectedFeature.set('description', description);
-            }
-            setSelectedFeature(null);
-          }}
-          onDelete={handleDelete}
-          onClose={() => setSelectedFeature(null)}
-        />
-      );
-    } else {
+    const isVisible = visibilityMap?.[activeDrawingRow] !== false;
+    if (!selectedFeature || !isVisible) {
       if (overlayRef.current) {
         map.removeOverlay(overlayRef.current);
-        const idx = allOverlays.findIndex((item) => item.overlay === overlayRef.current);
-        if (idx !== -1) allOverlays.splice(idx, 1);
+        allOverlays.splice(
+          allOverlays.findIndex((o) => o.overlay === overlayRef.current),
+          1
+        );
+        rootRef.current?.unmount();
         overlayRef.current = null;
-        if (rootRef.current) {
-          rootRef.current.unmount();
-          rootRef.current = null;
-        }
+        rootRef.current = null;
       }
-    }
-  }, [selectedFeature, setSelectedFeature, visible, rowId, map, name, handleDelete, density, description]);
-
-  const toggleDrawing = () => {
-    if (drawRef.current) {
-      map.removeInteraction(drawRef.current);
-      drawRef.current = null;
-      setActiveDrawingRow(null);
-      handleCheckboxChange(rowId, false);
-    }
-    if (selectRef.current) {
-      map.removeInteraction(selectRef.current);
-      selectRef.current = null;
+      return;
     }
 
-    if (!isActive || activeDrawingRow !== rowId) {
-      const newDrawInteraction = new Draw({
-        source: vectorSource,
-        type: 'Polygon',
-        freehand: true,
+    const geom = selectedFeature.getGeometry();
+    if (!geom) return;
+
+    const coords =
+      geom.getType() === "Polygon"
+        ? geom.getCoordinates()[0]
+        : geom.getCoordinates();
+
+    let topPoint = coords[0];
+    let bottomPoint = coords[0];
+    coords.forEach((pt) => {
+      if (pt[1] > topPoint[1]) topPoint = pt;
+      if (pt[1] < bottomPoint[1]) bottomPoint = pt;
+    });
+
+    const topPixel = map.getPixelFromCoordinate(topPoint);
+    const popupHeightPx = 140;
+    const showAbove = topPixel[1] - popupHeightPx > 0;
+
+    const positioning = showAbove ? "bottom-center" : "top-center";
+    const offset = showAbove ? [0, -8] : [0, 8];
+    const popupCoordinate = showAbove ? topPoint : bottomPoint;
+
+    if (!overlayRef.current) {
+      allOverlays.forEach(({ overlay, root }) => {
+        map.removeOverlay(overlay);
+        root?.unmount();
       });
+      allOverlays.length = 0;
 
-      drawRef.current = newDrawInteraction;
-      setActiveDrawingRow(rowId);
-      handleCheckboxChange(rowId, true);
-
-      newDrawInteraction.on('drawend', (event) => {
-        const feature = event.feature;
-        feature.set('id', rowId);
-        feature.set('density', 0);
-        feature.set('description', ''); // initialize description empty on new feature
-        feature.setStyle(createFeatureStyle(rowColor, visible, feature, name, map));
-        setDrawnFeatures((prev) => [...prev, feature]);
-        setSelectedFeature(feature);
+      const container = document.createElement("div");
+      const root = ReactDOM.createRoot(container);
+      const overlay = new Overlay({
+        element: container,
+        position: popupCoordinate,
+        positioning,
+        offset,
+        stopEvent: true,
       });
+      map.addOverlay(overlay);
 
-      const selectInteraction = new Select({
-        condition: click,
-      });
-
-      selectInteraction.on('select', (event) => {
-        const selected = event.selected[0] || null;
-        setSelectedFeature(selected);
-      });
-
-      selectRef.current = selectInteraction;
-
-      map.addInteraction(selectInteraction);
-      map.addInteraction(newDrawInteraction);
+      overlayRef.current = overlay;
+      rootRef.current = root;
+      allOverlays.push({ overlay, root });
     } else {
-      if (drawnFeatures.some((feature) => feature.get('id') === rowId)) {
-        handleCheckboxChange(rowId, true);
-      }
+      overlayRef.current.setPosition(popupCoordinate);
+      overlayRef.current.setPositioning(positioning);
+      overlayRef.current.setOffset(offset);
     }
-  };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <Tooltip title={isActive ? 'Stop Drawing' : 'Start Drawing'} arrow>
-        <IconButton
-          onClick={toggleDrawing}
-          color={isActive ? 'error' : 'success'}
-          sx={{
-            borderRadius: 2,
-            backgroundColor: isActive ? 'error.main' : 'success.main',
-            color: '#fff',
-            '&:hover': {
-              backgroundColor: isActive ? 'error.dark' : 'success.dark',
-            },
-          }}
-          aria-label={isActive ? 'stop drawing' : 'start drawing'}
-          size="small"
-        >
-          {isActive ? <StopIcon /> : <EditIcon />}
-        </IconButton>
-      </Tooltip>
-    </div>
-  );
+    const direction = showAbove ? "bottom" : "top";
+
+    rootRef.current.render(
+      <PopupContent
+        density={density}
+        description={description}
+        drawingName={selectedFeature?.get("name") || ""}
+        onChange={(e, val) => setDensity(val)}
+        onDescriptionChange={setDescription}
+        onSave={() => {
+          if (selectedFeature) {
+            selectedFeature.set("density", density);
+            selectedFeature.set("description", description);
+          }
+          setSelectedFeature(null);
+          showSnackbar("successfully saved density/description");
+          selectRef.current?.getFeatures().clear();
+        }}
+        onDelete={handleDelete}
+        onClose={() => {
+          setSelectedFeature(null);
+          selectRef.current?.getFeatures().clear();
+        }}
+        direction={direction}
+      />
+    );
+  }, [
+    map,
+    selectedFeature,
+    density,
+    description,
+    visibilityMap,
+    activeDrawingRow,
+    setDensity,
+    setDescription,
+    setSelectedFeature,
+    handleDelete,
+    selectRef,
+  ]);
 };
 
-export default memo(DrawingComponent);
+const useDrawingInteraction = ({
+  map,
+  vectorSource,
+  colorRef,
+  idRef,
+  nameRef,
+  setDrawnFeatures,
+  handleCheckboxChange,
+  selectRef,
+  setSelectedFeature,
+  createFeatureStyle,
+}) => {
+  const sketchOverlayRef = useRef(null);
+  const sketchElementRef = useRef(null);
+  const drawRef = useRef(null);
+
+  useEffect(() => {
+    if (!map || !vectorSource) return;
+
+    if (!sketchElementRef.current) {
+      const tooltip = document.createElement("div");
+      Object.assign(tooltip.style, tooltipStyle);
+      sketchElementRef.current = tooltip;
+
+      const overlay = new Overlay({
+        element: tooltip,
+        offset: [0, -15],
+        positioning: "bottom-center",
+      });
+      map.addOverlay(overlay);
+      sketchOverlayRef.current = overlay;
+    }
+
+    drawRef.current = new Draw({
+      source: vectorSource,
+      type: "Polygon",
+      freehand: true,
+    });
+
+    drawRef.current.setActive(false);
+
+    let sketch = null;
+
+    const pointerMoveHandler = (evt) => {
+      if (!drawRef.current?.getActive() || !sketch) {
+        sketchElementRef.current.style.display = "none";
+        return;
+      }
+      sketchElementRef.current.style.display = "block";
+      const geom = sketch.getGeometry();
+      if (!geom) return;
+      const area = formatArea(geom);
+      sketchElementRef.current.innerHTML = `<span>${area}</span>`;
+      sketchOverlayRef.current.setPosition(evt.coordinate);
+    };
+
+    map.on("pointermove", pointerMoveHandler);
+
+    drawRef.current.on("drawstart", (evt) => {
+      sketch = evt.feature;
+      sketchElementRef.current.style.display = "block";
+      sketchOverlayRef.current.setPosition(undefined);
+    });
+
+    drawRef.current.on("drawend", (evt) => {
+      sketch = null;
+      sketchElementRef.current.style.display = "none";
+
+      const feature = evt.feature;
+      feature.set("id", idRef.current || "UnnamedID");
+      feature.set("name", nameRef.current || "Unnamed");
+      feature.set("color", colorRef.current || "#000");
+      feature.set("timestamp", new Date().toISOString());
+      feature.setStyle(createFeatureStyle(feature, map));
+
+      setDrawnFeatures((prev) => [...prev, feature]);
+      handleCheckboxChange(idRef.current, true);
+
+      selectRef.current?.getFeatures().clear();
+      selectRef.current?.getFeatures().push(feature);
+      setSelectedFeature(feature);
+    });
+
+    map.addInteraction(drawRef.current);
+
+    return () => {
+      map.un("pointermove", pointerMoveHandler);
+      map.removeInteraction(drawRef.current);
+
+      if (sketchOverlayRef.current) {
+        map.removeOverlay(sketchOverlayRef.current);
+        sketchOverlayRef.current = null;
+      }
+      sketchElementRef.current = null;
+    };
+  }, [
+    map,
+    vectorSource,
+    colorRef,
+    idRef,
+    nameRef,
+    setDrawnFeatures,
+    handleCheckboxChange,
+    selectRef,
+    setSelectedFeature,
+    createFeatureStyle,
+  ]);
+
+  useEffect(() => {
+    if (!map || !drawRef.current) return;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length > 1) {
+        drawRef.current.setActive(false);
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length === 0) {
+        const currentId = idRef.current;
+        const currentColor = colorRef.current;
+        if (currentId && currentColor) {
+          drawRef.current.setActive(true);
+        }
+      }
+    };
+
+    const viewport = map.getViewport();
+    viewport.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    viewport.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      viewport.removeEventListener("touchstart", handleTouchStart);
+      viewport.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [map]);
+
+  return drawRef;
+};
+
+const useSelectionInteraction = ({
+  map,
+  createFeatureStyle,
+  setSelectedFeature,
+  selectRef,
+}) => {
+  useEffect(() => {
+    if (!map) return;
+
+    selectRef.current = new Select({
+      condition: singleClick,
+      style: (feature) => {
+        const baseStyle = createFeatureStyle(feature, map);
+        const color = feature.get("color") || "#000";
+        return new Style({
+          fill: new Fill({ color: `${color}aa` }),
+          stroke: new Stroke({ color, width: 3 }),
+          text: baseStyle?.getText(),
+        });
+      },
+    });
+
+    map.addInteraction(selectRef.current);
+
+    selectRef.current.on("select", (e) => {
+      const selected = e.selected?.[0];
+      setSelectedFeature(selected || null);
+    });
+
+    return () => {
+      map.removeInteraction(selectRef.current);
+    };
+  }, [map, createFeatureStyle, setSelectedFeature, selectRef]);
+};
+
+const Drawing = () => {
+  const {
+    map,
+    vectorSource,
+    selectRef,
+    setDrawnFeatures,
+    drawnFeatures,
+    activeColor,
+    activeDrawingRow,
+    activeName,
+    handleCheckboxChange,
+    visibilityMap,
+    selectedFeature,
+    setSelectedFeature,
+    showSnackbar,
+  } = useMapContext();
+
+  const colorRef = useRef(activeColor);
+  const idRef = useRef(activeDrawingRow);
+  const nameRef = useRef(activeName);
+
+  useEffect(() => {
+    colorRef.current = activeColor;
+    idRef.current = activeDrawingRow;
+    nameRef.current = activeName;
+  }, [activeColor, activeDrawingRow, activeName]);
+
+  const [density, setDensity] = useState(0);
+  const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (selectedFeature?.get("id") === activeDrawingRow) {
+      setDensity(selectedFeature.get("density") ?? 0);
+      setDescription(selectedFeature.get("description") ?? "");
+    }
+  }, [selectedFeature, activeDrawingRow]);
+
+  const handleDelete = useCallback(() => {
+    if (!selectedFeature) return;
+    vectorSource.removeFeature(selectedFeature);
+    setDrawnFeatures((prev) => prev.filter((f) => f !== selectedFeature));
+    setSelectedFeature(null);
+    showSnackbar("successfully deleted drawing!");
+    selectRef.current?.getFeatures().clear();
+  }, [
+    selectedFeature,
+    vectorSource,
+    setDrawnFeatures,
+    setSelectedFeature,
+    selectRef,
+  ]);
+
+  usePopupOverlay({
+    map,
+    selectedFeature,
+    density,
+    description,
+    setDensity,
+    setDescription,
+    setSelectedFeature,
+    handleDelete,
+    visibilityMap,
+    activeDrawingRow,
+    activeName,
+    selectRef,
+  });
+
+  const drawInteractionRef = useDrawingInteraction({
+    map,
+    vectorSource,
+    colorRef,
+    idRef,
+    nameRef,
+    setDrawnFeatures,
+    handleCheckboxChange,
+    selectRef,
+    setSelectedFeature,
+    createFeatureStyle,
+  });
+
+  useSelectionInteraction({
+    map,
+    createFeatureStyle,
+    setSelectedFeature,
+    selectRef,
+  });
+
+  const prevActiveDrawingRow = useRef(null);
+  useEffect(() => {
+    const currentRow = activeDrawingRow;
+    const previousRow = prevActiveDrawingRow.current;
+    const shouldDraw = !!(activeColor && currentRow);
+    drawInteractionRef.current?.setActive(shouldDraw);
+    if (shouldDraw && currentRow) {
+      handleCheckboxChange(currentRow, true);
+    } else if (!shouldDraw && previousRow) {
+      const hasDrawings = drawnFeatures.some(
+        (feature) => String(feature.get("id")) === String(previousRow)
+      );
+      if (!hasDrawings) {
+        handleCheckboxChange(previousRow, false);
+      }
+    }
+    prevActiveDrawingRow.current = currentRow;
+  }, [
+    activeDrawingRow,
+    activeColor,
+    drawnFeatures,
+    handleCheckboxChange,
+    drawInteractionRef,
+  ]);
+
+  return null;
+};
+
+export default Drawing;

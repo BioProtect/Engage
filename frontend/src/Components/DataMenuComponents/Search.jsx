@@ -1,12 +1,11 @@
-import React from 'react';
-import { TextField, InputAdornment, IconButton } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
+import React from "react";
+import { TextField, InputAdornment, IconButton } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 
 const SearchField = ({ searchQuery, onSearchChange }) => {
-  // Handle clear button click
   const handleClear = () => {
-    onSearchChange({ target: { value: '' } });
+    onSearchChange({ target: { value: "" } });
   };
 
   return (
@@ -18,15 +17,15 @@ const SearchField = ({ searchQuery, onSearchChange }) => {
       size="small"
       sx={{
         marginBottom: 2,
-        borderRadius: '20px',
-        '& .MuiOutlinedInput-root': {
-          borderRadius: '20px',
+        borderRadius: "20px",
+        "& .MuiOutlinedInput-root": {
+          borderRadius: "20px",
         },
-        '& .MuiInputLabel-root': {
-          fontSize: '1rem',
+        "& .MuiInputLabel-root": {
+          fontSize: "1rem",
         },
-        '& .MuiOutlinedInput-input': {
-          paddingLeft: '0.75rem', 
+        "& .MuiOutlinedInput-input": {
+          paddingLeft: "0.75rem",
         },
       }}
       InputProps={{
