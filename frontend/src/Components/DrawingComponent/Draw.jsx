@@ -455,12 +455,12 @@ const Drawing = () => {
     nameRef.current = activeName;
   }, [activeColor, activeDrawingRow, activeName]);
 
-  const [density, setDensity] = useState(0);
+  const [density, setDensity] = useState(1);
   const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (selectedFeature?.get("id") === activeDrawingRow) {
-      setDensity(selectedFeature.get("density") ?? 0);
+      setDensity(selectedFeature.get("density") ?? 1);
       setDescription(selectedFeature.get("description") ?? "");
     }
   }, [selectedFeature, activeDrawingRow]);

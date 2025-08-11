@@ -5,18 +5,21 @@ from flask_jwt_extended import JWTManager, create_access_token
 import psycopg2
 import psycopg2.extras
 from psycopg2.errors import UniqueViolation
+from psycopg2 import sql
 import random
 import json
 import os
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+
+
+CORS(app)
+
 bcrypt = Bcrypt(app)
-
-
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 jwt = JWTManager(app)
 
@@ -26,6 +29,7 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
     "host": os.getenv("DB_HOST"),
     "port": os.getenv("DB_PORT"),
+    "options": os.getenv("DB_OPTIONS", "")
 }
 
 try:
@@ -109,7 +113,7 @@ def get_drawing_items():
 def generate_unique_color(cur):
     for _ in range(10):
         color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
-        cur.execute("SELECT 1 FROM items WHERE color = %s", (color,))
+        cur.execute("SELECT 1 FROM drawingitems WHERE color = %s", (color,))
         if cur.fetchone() is None:
             return color
     raise Exception("Could not generate unique color")
@@ -176,36 +180,93 @@ def delete_drawing_item(item_id):
 
 @app.route('/save_polygon', methods=['POST'])
 def save_polygon():
+
     data = request.json
 
     user = data.get('user')
     usergroup = data.get('userGroup')
     name = data.get('name')
-    color = data.get('color')
     description = data.get('description', '')
-    density = data.get('density', 0)
-    timestamp = data.get('timestamp')
+    density = data.get('density', 1)
     geometry = data.get('geometry')
+    euniscombd = None
+    msfd_bbht = None
+    unique_eun = None
 
-    if not all([name, color, timestamp, geometry]):
+    if not all([name, geometry]):
         return jsonify({"error": "Missing required fields"}), 400
 
     geometry_json = json.dumps(geometry)
 
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO savedpolygons ("user", usergroup, name, color, description, density, timestamp, geom)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))
-            """, (user, usergroup, name, color, description, density, timestamp, geometry_json))
-            conn.commit()
+    feature_class_name = "f_" + uuid.uuid4().hex[:30]
+    tileset_id = f"bioprotect.{feature_class_name}"
 
-        return jsonify({"message": "Polygon saved successfully"}), 200
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                # Create the table with the polygon - this is the feature table f_randomstring
+                create_sql = sql.SQL("""
+                    CREATE TABLE bioprotect.{table} AS
+                    SELECT
+                        %s::text AS euniscombd,
+                        %s::text AS msfd_bbht,
+                        %s::text AS unique_eun,
+                        %s::decimal AS density,
+                        ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326) AS geometry
+                """).format(table=sql.Identifier(feature_class_name))
+
+                cur.execute(create_sql, (
+                    euniscombd,
+                    msfd_bbht,
+                    unique_eun,
+                    density,
+                    geometry_json
+                ))
+
+                # Add spatial index and primary key - legacy issue with previous database
+                index_name = f"idx_{uuid.uuid4().hex}"
+                cur.execute(
+                    sql.SQL(
+                        "CREATE INDEX {} ON bioprotect.{} USING GIST (geometry);")
+                    .format(sql.Identifier(index_name), sql.Identifier(feature_class_name))
+                )
+
+                cur.execute(
+                    sql.SQL(
+                        "ALTER TABLE bioprotect.{} DROP COLUMN IF EXISTS id, DROP COLUMN IF EXISTS ogc_fid;")
+                    .format(sql.Identifier(feature_class_name))
+                )
+
+                cur.execute(
+                    sql.SQL(
+                        "ALTER TABLE bioprotect.{} ADD COLUMN id SERIAL PRIMARY KEY;")
+                    .format(sql.Identifier(feature_class_name))
+                )
+
+                # Calculate area and extent directly from GeoJSON
+                cur.execute("""
+                    SELECT 
+                        ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), 3410)) AS _area,
+                        box2d(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)) AS extent
+                """, (geometry_json, geometry_json))
+                area, extent = cur.fetchone()
+
+                # Insert into metadata table. This table tracks all the features in the database.
+                cur.execute("""
+                    INSERT INTO bioprotect.metadata_interest_features (
+                        feature_class_name, name, description, creation_date, _area, tilesetid, extent, source, created_by
+                    )
+                    VALUES (%s, %s, %s, now(), %s, %s, %s, %s, %s)
+                    RETURNING unique_id;
+                """, (feature_class_name, name, description, area, tileset_id, extent, usergroup, user))
+
+        return jsonify({"message": "Feature saved successfully"}), 200
 
     except Exception as e:
         print(f"Error saving polygon: {e}")
         conn.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 
 # -------------------- MAIN --------------------
