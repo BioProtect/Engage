@@ -1,7 +1,13 @@
 import React from "react";
 import { Snackbar, Alert } from "@mui/material";
 
-const SuccessSnackbar = ({ open, message, onClose }) => {
+const SuccessSnackbar = ({ open, message, onClose, severity = "success" }) => {
+  const isError = severity === "error";
+  const bgColor = isError ? "#d32f2f" : "#008000";
+  const boxShadowColor = isError
+    ? "rgba(211, 47, 47, 0.3)"
+    : "rgba(0, 128, 0, 0.3)";
+
   return (
     <Snackbar
       open={open}
@@ -14,7 +20,7 @@ const SuccessSnackbar = ({ open, message, onClose }) => {
     >
       <Alert
         onClose={onClose}
-        severity="success"
+        severity={severity}
         variant="filled"
         elevation={6}
         sx={{
@@ -22,8 +28,9 @@ const SuccessSnackbar = ({ open, message, onClose }) => {
           borderRadius: 2,
           fontWeight: 600,
           fontSize: 14,
-          boxShadow: "0 4px 12px rgba(0, 128, 0, 0.3)",
+          boxShadow: `0 4px 12px ${boxShadowColor}`,
           letterSpacing: 0.5,
+          backgroundColor: bgColor,
         }}
       >
         {message}

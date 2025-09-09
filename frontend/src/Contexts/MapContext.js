@@ -12,6 +12,8 @@ const MapContext = createContext();
 export const MapProvider = ({ children }) => {
   const [map, setMap] = useState(null);
   const [vectorSource, setVectorSource] = useState(null);
+  const [geoTiffLayer, setGeoTiffLayer] = useState(null);
+  const [geoTiffList, setGeoTiffList] = useState(null);
 
   const drawRef = useRef(null);
   const selectRef = useRef(null);
@@ -22,12 +24,13 @@ export const MapProvider = ({ children }) => {
   const [activeName, setActiveName] = useState(null);
 
   const [selectedFeature, setSelectedFeature] = useState(null);
-  const [geoTiffLayer, setGeoTiffLayer] = useState(null);
 
   const [visibilityMap, setVisibilityMap] = useState({});
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  const [showLabels, setShowLabels] = useState(true);
 
   const showSnackbar = useCallback((msg) => {
     setSnackbarMessage(msg);
@@ -76,6 +79,10 @@ export const MapProvider = ({ children }) => {
         setMap,
         vectorSource,
         setVectorSource,
+        geoTiffLayer,
+        setGeoTiffLayer,
+        geoTiffList,
+        setGeoTiffList,
         drawRef,
         selectRef,
         drawnFeatures,
@@ -83,18 +90,18 @@ export const MapProvider = ({ children }) => {
         activeDrawingRow,
         setActiveDrawingRow,
         visibilityMap,
+        setVisibilityMap,
         handleCheckboxSelection,
         handleCheckboxChange,
-        setVisibilityMap,
         activeColor,
         setActiveColor,
         activeName,
         setActiveName,
         selectedFeature,
         setSelectedFeature,
-        geoTiffLayer,
-        setGeoTiffLayer,
         showSnackbar,
+        showLabels,
+        setShowLabels,
       }}
     >
       {children}

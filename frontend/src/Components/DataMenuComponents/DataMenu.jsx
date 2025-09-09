@@ -1,9 +1,16 @@
-import { useState, useEffect } from "react";
-import { Box, Button, Divider, IconButton, Tooltip } from "@mui/material";
+import { useState, useEffect, useRef } from "react";
+import {
+  Box,
+  Button,
+  Divider,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  Typography,
+  Switch,
+} from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import LayersIcon from "@mui/icons-material/Layers";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
-
 import AddItemDialog from "./AddItemDialog";
 import CategoryTabs from "./CategoryTabs";
 import DataRow from "./DataRow";
@@ -16,21 +23,90 @@ import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
-import CircularProgress from "@mui/material/CircularProgress";
-import { Typography } from "@mui/material";
+import ConfirmDialog from "./ConfirmDialog";
 
 const DataMenu = () => {
+  const menuRef = useRef(null);
+  const scrollContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState({
-    Features: [],
-    Activities: [],
-  });
+  const [data, setData] = useState({ Features: [], Activities: [] });
+  const [lastSelectedId, setLastSelectedId] = useState(null);
+
+  const [openDropdownRowId, setOpenDropdownRowId] = useState(null);
+  const [dropdownAnchor, setDropdownAnchor] = useState(null);
+  const [userOpenedDropdown, setUserOpenedDropdown] = useState(false);
+
+  const fallbackData = {
+    Features: [
+      {
+        id: 1,
+        name: "Coral Reef",
+        color: "#FF6666",
+        description:
+          "A diverse underwater ecosystem found in warm ocean waters.",
+      },
+      {
+        id: 2,
+        name: "Fresh Water",
+        color: "#8A2BE2",
+        description:
+          "A habitat of rivers, lakes, and ponds that are low in salt content.",
+      },
+      {
+        id: 3,
+        name: "Kelp Forest",
+        color: "#32CD32",
+        description:
+          "A coastal underwater forest of giant kelp plants, home to many species.",
+      },
+      {
+        id: 4,
+        name: "Open Ocean",
+        color: "#1E90FF",
+        description: "The vast, deep waters of the ocean away from the coast.",
+      },
+      {
+        id: 5,
+        name: "Salt Marsh",
+        color: "#D2691E",
+        description:
+          "A coastal ecosystem of salt-tolerant plants and tidal waters.",
+      },
+    ],
+    Activities: [
+      {
+        id: 10,
+        name: "Overfishing",
+        color: "#FF4500",
+        description: "The depletion of fish species due to excessive fishing.",
+      },
+      {
+        id: 11,
+        name: "Pollution",
+        color: "#2E8B57",
+        description:
+          "The introduction of harmful substances into the environment.",
+      },
+      {
+        id: 12,
+        name: "Rain",
+        color: "#4169E1",
+        description:
+          "Precipitation in the form of water droplets falling from the sky.",
+      },
+      {
+        id: 13,
+        name: "Wind",
+        color: "#FFD700",
+        description: "The movement of air from high to low pressure areas.",
+      },
+    ],
+  };
 
   const loadData = async () => {
     try {
       setIsLoading(true);
       const fetchedData = await get_drawing_items();
-
       const transform = (arr) =>
         arr.map(({ id, name, description, color, type }) => ({
           id,
@@ -41,13 +117,22 @@ const DataMenu = () => {
         }));
 
       const formattedData = {
-        Features: transform(fetchedData.Features || []),
-        Activities: transform(fetchedData.Activities || []),
+        Features: transform(fetchedData?.Features || []),
+        Activities: transform(fetchedData?.Activities || []),
       };
 
-      setData(formattedData);
+      if (
+        formattedData.Features.length === 0 &&
+        formattedData.Activities.length === 0
+      ) {
+        console.warn("Using fallback data (empty API response).");
+        setData(fallbackData);
+      } else {
+        setData(formattedData);
+      }
     } catch (err) {
       console.error("Failed to fetch data:", err);
+      setData(fallbackData);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +153,6 @@ const DataMenu = () => {
   const {
     activeDrawingRow,
     drawnFeatures,
-    geoTiffLayer,
     map,
     drawRef,
     vectorSource,
@@ -78,23 +162,27 @@ const DataMenu = () => {
     visibilityMap,
     handleCheckboxChange,
     showSnackbar,
+    showLabels,
+    setShowLabels,
   } = useMapContext();
 
-  const [geoTiffVisible, setGeoTiffVisible] = useState(true);
-  const toggleGeoTiffLayer = () => {
-    if (geoTiffLayer && map) {
-      geoTiffLayer.setVisible(!geoTiffVisible);
-      setGeoTiffVisible(!geoTiffVisible);
-    }
-  };
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmProps, setConfirmProps] = useState({
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+
+  useEffect(() => {
+    if (activeDrawingRow) setLastSelectedId(activeDrawingRow);
+  }, [activeDrawingRow]);
 
   const clearAllDrawings = () => {
+    if (drawnFeatures.length === 0) return;
     drawnFeatures.forEach((feature) => {
       vectorSource.removeFeature(feature);
-      const featureId = feature.get("id");
-      handleCheckboxChange(featureId, false);
+      handleCheckboxChange(feature.get("id"), false);
     });
-
     setDrawnFeatures([]);
     setActiveDrawingRow(null);
     setSelectedFeature(null);
@@ -108,57 +196,64 @@ const DataMenu = () => {
     });
     setData(newData);
     map.removeInteraction(drawRef.current);
+
+    if (openDropdownRowId === rowId) {
+      setOpenDropdownRowId(null);
+      setDropdownAnchor(null);
+      setUserOpenedDropdown(false);
+    }
   };
 
   const [allSelected, setAllSelected] = useState(false);
-
   const handleSelectAllToggle = () => {
-    if (!allSelected) {
-      Object.values(data)
-        .flat()
-        .filter((item) => {
-          const hasDrawings = drawnFeatures.some(
-            (feature) => feature.get("id") === item.id
-          );
-          return hasDrawings && item.id !== activeDrawingRow;
-        })
-        .forEach((item) => {
-          handleCheckboxChange(item.id, true);
-        });
-    } else {
-      Object.values(data)
-        .flat()
-        .filter((item) => {
-          const hasDrawings = drawnFeatures.some(
-            (feature) => feature.get("id") === item.id
-          );
-          return hasDrawings && item.id !== activeDrawingRow;
-        })
-        .forEach((item) => {
-          handleCheckboxChange(item.id, false);
-        });
-    }
+    const items = Object.values(data)
+      .flat()
+      .filter(
+        (item) =>
+          drawnFeatures.some((f) => f.get("id") === item.id) &&
+          item.id !== activeDrawingRow
+      );
+    items.forEach((item) => handleCheckboxChange(item.id, !allSelected));
     setAllSelected(!allSelected);
   };
 
   const handleAddItem = async (item) => {
     try {
-      await loadData();
-      showSnackbar(item.name + " was sucessfully added!");
+      setData((prevData) => {
+        const category = item.type === "Feature" ? "Features" : "Activities";
+        return {
+          ...prevData,
+          [category]: [...prevData[category], item],
+        };
+      });
+      showSnackbar(`${item.name} was successfully added!`);
     } catch (error) {
-      console.error("Failed to add item or refresh data:", error);
+      console.error("Failed to add item:", error);
     }
   };
 
   const handleFinishSession = () => {
     setActiveDrawingRow(null);
     drawRef.current?.setActive(false);
-
-    drawnFeatures.forEach((feature) => {
-      const featureId = feature.get("id");
-      handleCheckboxChange(featureId, false);
-    });
+    drawnFeatures.forEach((feature) =>
+      handleCheckboxChange(feature.get("id"), false)
+    );
   };
+
+  useEffect(() => {
+    if (!openDropdownRowId) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setOpenDropdownRowId(null);
+      setUserOpenedDropdown(false);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [openDropdownRowId]);
 
   const filteredData = data[selectedCategory]
     .filter(
@@ -172,25 +267,23 @@ const DataMenu = () => {
           return a.name.localeCompare(b.name);
         case "Color":
           return a.color.localeCompare(b.color);
-        case "Active": {
-          const aVisible = visibilityMap[a.id] ?? false;
-          const bVisible = visibilityMap[b.id] ?? false;
-          return bVisible - aVisible;
-        }
-        case "Inactive": {
-          const aVisible = visibilityMap[a.id] ?? false;
-          const bVisible = visibilityMap[b.id] ?? false;
-          return aVisible - bVisible;
-        }
-        case "Drawings": {
-          const aCount = drawnFeatures.filter(
-            (f) => f.get("id") === a.id
-          ).length;
-          const bCount = drawnFeatures.filter(
-            (f) => f.get("id") === b.id
-          ).length;
-          return bCount - aCount;
-        }
+        case "Active":
+          return (
+            (visibilityMap[b.id] ?? false) - (visibilityMap[a.id] ?? false)
+          );
+        case "Inactive":
+          return (
+            (visibilityMap[a.id] ?? false) - (visibilityMap[b.id] ?? false)
+          );
+        case "Drawings":
+          return (
+            drawnFeatures.filter((f) => f.get("id") === b.id).length -
+            drawnFeatures.filter((f) => f.get("id") === a.id).length
+          );
+        case "Recent":
+          if (a.id === lastSelectedId) return -1;
+          if (b.id === lastSelectedId) return 1;
+          return 0;
         default:
           return 0;
       }
@@ -204,22 +297,23 @@ const DataMenu = () => {
 
   return (
     <Box
+      ref={menuRef}
       sx={{
         position: "absolute",
-        top: { xs: 1, sm: 5, lg: 10 },
+        top: isOpen ? `calc(20px + env(safe-area-inset-top))` : "20px",
         left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-        bgcolor: "background.paper",
-        p: 2,
+        bgcolor: isOpen ? "background.paper" : "transparent",
+        p: 1.5,
         borderRadius: 2,
         boxShadow: 3,
         width: { xs: "60vw", sm: "45vw", md: "40vw", lg: "370px" },
-        maxWidth: 370,
-        maxHeight: isOpen ? 600 : stickyRow ? 170 : 60,
+        maxWidth: 360,
+        maxHeight: isOpen ? "77vh" : stickyRow ? "25vh" : "8vh",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        transition: "max-height 0.4s ease",
+        transition: "max-height 0.4s ease, bgcolor 0.3s ease",
       }}
     >
       <Button
@@ -249,7 +343,7 @@ const DataMenu = () => {
             sx={{
               display: "flex",
               alignItems: "center",
-              marginBottom: 2,
+              mb: 2,
               justifyContent: "space-between",
             }}
           >
@@ -268,18 +362,26 @@ const DataMenu = () => {
             searchQuery={searchQuery}
             onSearchChange={(e) => setSearchQuery(e.target.value)}
           />
-        </>
-      )}
 
-      {stickyRow && (
-        <Box sx={{ marginBottom: 2 }}>
-          <DataRow row={stickyRow} deleteRow={deleteRow} />
-        </Box>
-      )}
+          {stickyRow && (
+            <Box sx={{ mb: 2 }}>
+              <DataRow
+                row={stickyRow}
+                deleteRow={deleteRow}
+                openDropdownRowId={openDropdownRowId}
+                setOpenDropdownRowId={setOpenDropdownRowId}
+                dropdownAnchor={dropdownAnchor}
+                setDropdownAnchor={setDropdownAnchor}
+                userOpenedDropdown={userOpenedDropdown}
+                setUserOpenedDropdown={setUserOpenedDropdown}
+              />
+            </Box>
+          )}
 
-      {isOpen && (
-        <>
-          <Box sx={{ flexGrow: 1, overflowY: "auto", paddingRight: 1 }}>
+          <Box
+            ref={scrollContainerRef}
+            sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}
+          >
             {isLoading ? (
               <Box
                 sx={{
@@ -300,7 +402,17 @@ const DataMenu = () => {
               </Box>
             ) : filteredData.length > 0 ? (
               filteredData.map((row) => (
-                <DataRow key={row.id} row={row} deleteRow={deleteRow} />
+                <DataRow
+                  key={row.id}
+                  row={row}
+                  deleteRow={deleteRow}
+                  openDropdownRowId={openDropdownRowId}
+                  setOpenDropdownRowId={setOpenDropdownRowId}
+                  dropdownAnchor={dropdownAnchor}
+                  setDropdownAnchor={setDropdownAnchor}
+                  userOpenedDropdown={userOpenedDropdown}
+                  setUserOpenedDropdown={setUserOpenedDropdown}
+                />
               ))
             ) : (
               <Box
@@ -336,11 +448,10 @@ const DataMenu = () => {
 
           <Box
             sx={{
-              marginTop: 3,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
+              mt: 3,
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 2,
               bgcolor: "background.paper",
               p: 2,
               borderRadius: 3,
@@ -349,34 +460,27 @@ const DataMenu = () => {
               userSelect: "none",
             }}
           >
+            {/* Select All */}
             <Tooltip
               title={
                 allSelected ? "Deselect All Drawings" : "Select All Drawings"
               }
             >
               <Box
+                onClick={handleSelectAllToggle}
                 sx={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
-                  userSelect: "none",
-                }}
-                onClick={handleSelectAllToggle}
-                aria-label={
-                  allSelected ? "Deselect All Drawings" : "Select All Drawings"
-                }
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    handleSelectAllToggle();
                 }}
               >
                 <IconButton
                   size="large"
                   sx={{
                     color: allSelected ? "primary.main" : "grey.700",
-                    fontSize: 28,
+                    fontSize: 30,
                     p: 0,
                   }}
                   disableRipple
@@ -387,100 +491,50 @@ const DataMenu = () => {
                     <CheckBoxOutlineBlankIcon fontSize="inherit" />
                   )}
                 </IconButton>
-                <Box
-                  component="span"
+                <Typography
                   sx={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    fontFamily:
-                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                    color: "text.primary",
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
                     mt: 0.5,
-                    letterSpacing: 0.15,
-                    userSelect: "none",
-                    lineHeight: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    height: 16,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {allSelected ? "Deselect All" : "Select All"}
-                </Box>
+                </Typography>
               </Box>
             </Tooltip>
 
-            <Tooltip
-              title={
-                geoTiffVisible ? "Hide GeoTIFF Layer" : "Show GeoTIFF Layer"
-              }
+            {/* Add Item */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  userSelect: "none",
-                }}
-                onClick={toggleGeoTiffLayer}
-                aria-label={
-                  geoTiffVisible ? "Hide GeoTIFF Layer" : "Show GeoTIFF Layer"
-                }
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") toggleGeoTiffLayer();
-                }}
-              >
-                <IconButton
-                  size="large"
-                  sx={{
-                    color: geoTiffVisible ? "success.main" : "grey.700",
-                    fontSize: 28,
-                    p: 0,
-                  }}
-                  disableRipple
-                >
-                  <LayersIcon fontSize="inherit" />
-                </IconButton>
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    fontFamily:
-                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                    color: "text.primary",
-                    mt: 0.5,
-                    letterSpacing: 0.15,
-                    userSelect: "none",
-                    lineHeight: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    height: 16,
-                  }}
-                >
-                  GeoTIFF
-                </Box>
-              </Box>
-            </Tooltip>
+              <AddItemDialog onAdd={handleAddItem} />
+            </Box>
 
-            <AddItemDialog onAdd={handleAddItem} />
-
+            {/* Clear All */}
             <Tooltip title="Clear All Drawings">
               <Box
+                onClick={() => {
+                  if (drawnFeatures.length === 0) return;
+                  setConfirmProps({
+                    title: "Clear All Drawings",
+                    description: "Are you sure you want to clear all drawings?",
+                    onConfirm: clearAllDrawings,
+                  });
+                  setConfirmOpen(true);
+                }}
                 sx={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  userSelect: "none",
-                }}
-                aria-label="Clear All Drawings"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === "Enter" || e.key === " ") &&
-                    drawnFeatures.length > 0
-                  )
-                    clearAllDrawings();
+                  justifyContent: "center",
+                  cursor: drawnFeatures.length > 0 ? "pointer" : "default",
                 }}
               >
                 <IconButton
@@ -488,39 +542,65 @@ const DataMenu = () => {
                   size="large"
                   sx={{
                     color: drawnFeatures.length > 0 ? "error.main" : "grey.400",
-                    fontSize: 28,
+                    fontSize: 30,
                     p: 0,
                   }}
                   disableRipple
-                  onClick={clearAllDrawings}
                 >
                   <DeleteSweepIcon fontSize="inherit" />
                 </IconButton>
-                <Box
-                  component="span"
+                <Typography
                   sx={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    fontFamily:
-                      "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                    color: drawnFeatures.length > 0 ? "error.main" : "grey.400",
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
                     mt: 0.5,
-                    letterSpacing: 0.15,
-                    userSelect: "none",
-                    lineHeight: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    height: 16,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   Clear Drawings
-                </Box>
+                </Typography>
               </Box>
             </Tooltip>
+
+            {/* Show Labels */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Switch
+                checked={showLabels}
+                onChange={(e) => setShowLabels(e.target.checked)}
+                color="primary"
+              />
+              <Typography
+                sx={{
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  mt: -0.4,
+                  textAlign: "center",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {showLabels ? "Hide Labels" : "Show Labels"}
+              </Typography>
+            </Box>
           </Box>
 
           <FinishSessionButton onFinish={handleFinishSession} />
-          <UserInfo></UserInfo>
+          <UserInfo />
+
+          <ConfirmDialog
+            open={confirmOpen}
+            onClose={() => setConfirmOpen(false)}
+            title={confirmProps.title}
+            description={confirmProps.description}
+            onConfirm={confirmProps.onConfirm}
+          />
         </>
       )}
     </Box>

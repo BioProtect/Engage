@@ -254,7 +254,7 @@ def save_polygon():
                 # Insert into metadata table. This table tracks all the features in the database.
                 cur.execute("""
                     INSERT INTO bioprotect.metadata_interest_features (
-                        feature_class_name, name, description, creation_date, _area, tilesetid, extent, source, created_by
+                        feature_class_name, alias, description, creation_date, _area, tilesetid, extent, source, created_by
                     )
                     VALUES (%s, %s, %s, now(), %s, %s, %s, %s, %s)
                     RETURNING unique_id;

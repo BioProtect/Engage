@@ -8,27 +8,41 @@ import {
 } from "@mui/material";
 import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
 import PaletteIcon from "@mui/icons-material/Palette";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import LayersClearIcon from "@mui/icons-material/LayersClear";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import EditIcon from "@mui/icons-material/Edit";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 const options = [
-  { value: "Name", label: "Name", icon: <SortByAlphaIcon fontSize="small" /> },
-  { value: "Color", label: "Color", icon: <PaletteIcon fontSize="small" /> },
   {
-    value: "Active",
-    label: "Active",
-    icon: <CheckCircleIcon fontSize="small" />,
+    value: "Name",
+    label: "Name",
+    icon: <SortByAlphaIcon fontSize="small" color="primary" />,
   },
   {
-    value: "Inactive",
-    label: "Inactive",
-    icon: <CancelIcon fontSize="small" />,
+    value: "Color",
+    label: "Color",
+    icon: <PaletteIcon fontSize="small" sx={{ color: "purple" }} />,
   },
   {
     value: "Drawings",
     label: "Drawings",
-    icon: <LayersClearIcon fontSize="small" />,
+    icon: <EditIcon fontSize="small" sx={{ color: "orange" }} />,
+  },
+  {
+    value: "Recent",
+    label: "Recent",
+    icon: <AccessTimeIcon fontSize="small" color="action" />,
+  },
+  {
+    value: "Active",
+    label: "Active",
+    icon: <CheckBoxIcon fontSize="small" color="success" />,
+  },
+  {
+    value: "Inactive",
+    label: "Inactive",
+    icon: <CheckBoxOutlineBlankIcon fontSize="small" color="disabled" />,
   },
 ];
 
@@ -36,14 +50,14 @@ const SortSelect = ({ sortOption, onChange }) => {
   const selectedOption = options.find((opt) => opt.value === sortOption);
 
   return (
-    <FormControl size="small" sx={{ minWidth: 130 }}>
+    <FormControl size="small" sx={{ minWidth: 110 }}>
       <Select
         value={sortOption}
         onChange={onChange}
         displayEmpty
         renderValue={() => (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <ListItemIcon sx={{ minWidth: 30 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ListItemIcon sx={{ minWidth: 26 }}>
               {selectedOption?.icon}
             </ListItemIcon>
             <Typography variant="body2" sx={{ display: "inline" }}>
@@ -54,7 +68,7 @@ const SortSelect = ({ sortOption, onChange }) => {
       >
         {options.map(({ value, label, icon }) => (
           <MenuItem key={value} value={value}>
-            <ListItemIcon sx={{ minWidth: 30 }}>{icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 26 }}>{icon}</ListItemIcon>
             <Typography variant="body2" sx={{ display: "inline" }}>
               {label}
             </Typography>

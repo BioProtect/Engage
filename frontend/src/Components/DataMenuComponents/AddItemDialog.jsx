@@ -343,7 +343,6 @@ const AddNewItem = ({ onAdd }) => {
                   if (!selected) {
                     return <em>Select category*</em>;
                   }
-                  // Swapped icons here:
                   if (selected === "Features") {
                     return (
                       <Box

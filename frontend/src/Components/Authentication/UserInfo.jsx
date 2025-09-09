@@ -29,7 +29,7 @@ const UserInfo = () => {
           px: 2,
           py: 1,
           borderRadius: 3,
-          border: "1px solid rgba(0, 0, 0, 0.15)", // subtle border
+          border: "1px solid rgba(0, 0, 0, 0.15)",
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
