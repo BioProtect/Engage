@@ -220,7 +220,8 @@ const DataMenu = () => {
   const handleAddItem = async (item) => {
     try {
       setData((prevData) => {
-        const category = item.type === "Feature" ? "Features" : "Activities";
+        const category = item.type === "Features" ? "Features" : "Activities";
+
         return {
           ...prevData,
           [category]: [...prevData[category], item],

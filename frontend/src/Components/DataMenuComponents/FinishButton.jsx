@@ -19,11 +19,12 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import ClearIcon from "@mui/icons-material/Clear";
 import { useAuth } from "../../Contexts/AuthenticationContext";
-import AuthForm from "../Authentication/AuthForm";
 import { useMapContext } from "../../Contexts/MapContext";
 import { save_polygon } from "../../Api/DataMenuApi";
-import ClearIcon from "@mui/icons-material/Clear";
+import AuthForm from "../Authentication/AuthForm";
+import SuccessSnackbar from "./SnackBar";
 
 const FinishSessionButton = ({ onFinish }) => {
   const { isAuthenticated, token, user } = useAuth();
@@ -33,6 +34,10 @@ const FinishSessionButton = ({ onFinish }) => {
   const [isButtonEnabled, setIsButtonEnabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userGroup, setUserGroup] = useState("");
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   useEffect(() => {
     setIsButtonEnabled(drawnFeatures && drawnFeatures.length > 0);
@@ -55,7 +60,9 @@ const FinishSessionButton = ({ onFinish }) => {
       if (drawnFeatures && drawnFeatures.length > 0) {
         setOpenDialog(true);
       } else {
-        alert("No drawings to save.");
+        setSnackbarMessage("No drawings to save.");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       }
     } else {
       setOpenDialog(true);
@@ -64,12 +71,16 @@ const FinishSessionButton = ({ onFinish }) => {
 
   const handleSaveSession = async () => {
     if (!token) {
-      alert("Authentication token missing.");
+      setSnackbarMessage("Authentication token missing.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       return;
     }
 
     if (!userGroup.trim()) {
-      alert("Please enter the user group before saving.");
+      setSnackbarMessage("Please enter the user group before saving.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       return;
     }
 
@@ -111,8 +122,14 @@ const FinishSessionButton = ({ onFinish }) => {
       clearAllDrawings();
       onFinish();
       setOpenDialog(false);
+
+      setSnackbarMessage("Session Saved Sucessfully!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
     } catch (err) {
-      alert(`Failed to save drawings: ${err.message}`);
+      setSnackbarMessage(`Failed to save drawings: ${err.message}`);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
     } finally {
       setIsSaving(false);
     }
@@ -140,6 +157,14 @@ const FinishSessionButton = ({ onFinish }) => {
             : "Finish Session"
           : "Login"}
       </Button>
+
+      {/* ✅ Snackbar */}
+      <SuccessSnackbar
+        open={snackbarOpen}
+        message={snackbarMessage}
+        severity={snackbarSeverity}
+        onClose={() => setSnackbarOpen(false)}
+      />
 
       <Dialog
         open={openDialog}
