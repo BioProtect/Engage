@@ -6,7 +6,7 @@ The BioProtect Engage app is part of the BioProtect Marine Planner system. It is
 
 By making marine planning tools more accessible, BioProtect Engage helps ensure that both technical experts and community stakeholders can interact with data, add inputs, and see the effects of their contributions in near real time.
 
-[](./bioprotect-engage.png)
+![BioProtect Engage home screen](./bioprotect-engage.png)
 
 ## Features
 
