@@ -1,2 +1,2 @@
-REACT_APP_MAPBOX_TOKEN = "sk.eyJ1IjoiY3JhaWNlcmphY2siLCJhIjoiY21hNm90dXQ3MHZqbzJuczhjZWZ3ZHRjZyJ9.-fXDC4ob8V1nGDkFs22o7A"
+REACT_APP_MAPBOX_TOKEN = "example mapbox token "
 REACT_APP_API_BASE_URL = "http://localhost:5000"
