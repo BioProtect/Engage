@@ -20,7 +20,7 @@
     "react-data-grid": "^7.0.0-beta.52",
     "react-dom": "^19.0.0",
     "react-map-gl": "^7.1.8",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Box,
   Button,
@@ -25,130 +25,94 @@ import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
 import ConfirmDialog from "./ConfirmDialog";
 
+const fallbackData = {
+  Features: [
+    {
+      id: 1,
+      name: "Coral Reef",
+      color: "#FF6666",
+      description: "A diverse underwater ecosystem found in warm ocean waters.",
+    },
+    {
+      id: 2,
+      name: "Fresh Water",
+      color: "#8A2BE2",
+      description:
+        "A habitat of rivers, lakes, and ponds that are low in salt content.",
+    },
+    {
+      id: 3,
+      name: "Kelp Forest",
+      color: "#32CD32",
+      description:
+        "A coastal underwater forest of giant kelp plants, home to many species.",
+    },
+    {
+      id: 4,
+      name: "Open Ocean",
+      color: "#1E90FF",
+      description: "The vast, deep waters of the ocean away from the coast.",
+    },
+    {
+      id: 5,
+      name: "Salt Marsh",
+      color: "#D2691E",
+      description:
+        "A coastal ecosystem of salt-tolerant plants and tidal waters.",
+    },
+  ],
+  Activities: [
+    {
+      id: 10,
+      name: "Overfishing",
+      color: "#FF4500",
+      description: "The depletion of fish species due to excessive fishing.",
+    },
+    {
+      id: 11,
+      name: "Pollution",
+      color: "#2E8B57",
+      description:
+        "The introduction of harmful substances into the environment.",
+    },
+    {
+      id: 12,
+      name: "Rain",
+      color: "#4169E1",
+      description:
+        "Precipitation in the form of water droplets falling from the sky.",
+    },
+    {
+      id: 13,
+      name: "Wind",
+      color: "#FFD700",
+      description: "The movement of air from high to low pressure areas.",
+    },
+  ],
+};
+
 const DataMenu = () => {
   const menuRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState({ Features: [], Activities: [] });
   const [lastSelectedId, setLastSelectedId] = useState(null);
-
   const [openDropdownRowId, setOpenDropdownRowId] = useState(null);
   const [dropdownAnchor, setDropdownAnchor] = useState(null);
   const [userOpenedDropdown, setUserOpenedDropdown] = useState(false);
-
-  const fallbackData = {
-    Features: [
-      {
-        id: 1,
-        name: "Coral Reef",
-        color: "#FF6666",
-        description:
-          "A diverse underwater ecosystem found in warm ocean waters.",
-      },
-      {
-        id: 2,
-        name: "Fresh Water",
-        color: "#8A2BE2",
-        description:
-          "A habitat of rivers, lakes, and ponds that are low in salt content.",
-      },
-      {
-        id: 3,
-        name: "Kelp Forest",
-        color: "#32CD32",
-        description:
-          "A coastal underwater forest of giant kelp plants, home to many species.",
-      },
-      {
-        id: 4,
-        name: "Open Ocean",
-        color: "#1E90FF",
-        description: "The vast, deep waters of the ocean away from the coast.",
-      },
-      {
-        id: 5,
-        name: "Salt Marsh",
-        color: "#D2691E",
-        description:
-          "A coastal ecosystem of salt-tolerant plants and tidal waters.",
-      },
-    ],
-    Activities: [
-      {
-        id: 10,
-        name: "Overfishing",
-        color: "#FF4500",
-        description: "The depletion of fish species due to excessive fishing.",
-      },
-      {
-        id: 11,
-        name: "Pollution",
-        color: "#2E8B57",
-        description:
-          "The introduction of harmful substances into the environment.",
-      },
-      {
-        id: 12,
-        name: "Rain",
-        color: "#4169E1",
-        description:
-          "Precipitation in the form of water droplets falling from the sky.",
-      },
-      {
-        id: 13,
-        name: "Wind",
-        color: "#FFD700",
-        description: "The movement of air from high to low pressure areas.",
-      },
-    ],
-  };
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const fetchedData = await get_drawing_items();
-      const transform = (arr) =>
-        arr.map(({ id, name, description, color, type }) => ({
-          id,
-          name,
-          description,
-          color,
-          type,
-        }));
-
-      const formattedData = {
-        Features: transform(fetchedData?.Features || []),
-        Activities: transform(fetchedData?.Activities || []),
-      };
-
-      if (
-        formattedData.Features.length === 0 &&
-        formattedData.Activities.length === 0
-      ) {
-        console.warn("Using fallback data (empty API response).");
-        setData(fallbackData);
-      } else {
-        setData(formattedData);
-      }
-    } catch (err) {
-      console.error("Failed to fetch data:", err);
-      setData(fallbackData);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const [isOpen, setIsOpen] = useState(true);
-  const toggleOpen = () => setIsOpen((prev) => !prev);
-
-  const categoryList = ["Features", "Activities"];
-  const [selectedCategory, setSelectedCategory] = useState(categoryList[0]);
+  const [selectedCategory, setSelectedCategory] = useState("Features");
   const [sortOption, setSortOption] = useState("Name");
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmProps, setConfirmProps] = useState({
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+  const [allSelected, setAllSelected] = useState(false);
+
+  const categoryList = ["Features", "Activities"];
 
   const {
     activeDrawingRow,
@@ -166,16 +130,62 @@ const DataMenu = () => {
     setShowLabels,
   } = useMapContext();
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmProps, setConfirmProps] = useState({
-    title: "",
-    description: "",
-    onConfirm: () => {},
-  });
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedData = await get_drawing_items();
+        const transform = (arr) =>
+          arr.map(({ id, name, description, color, type }) => ({
+            id,
+            name,
+            description,
+            color,
+            type,
+          }));
+
+        const formattedData = {
+          Features: transform(fetchedData?.Features || []),
+          Activities: transform(fetchedData?.Activities || []),
+        };
+
+        if (
+          formattedData.Features.length === 0 &&
+          formattedData.Activities.length === 0
+        ) {
+          console.warn("Using fallback data (empty API response).");
+          setData(fallbackData);
+        } else {
+          setData(formattedData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+        setData(fallbackData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   useEffect(() => {
     if (activeDrawingRow) setLastSelectedId(activeDrawingRow);
   }, [activeDrawingRow]);
+
+  useEffect(() => {
+    if (!openDropdownRowId) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setOpenDropdownRowId(null);
+      setUserOpenedDropdown(false);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [openDropdownRowId]);
 
   const clearAllDrawings = () => {
     if (drawnFeatures.length === 0) return;
@@ -195,7 +205,8 @@ const DataMenu = () => {
       newData[category] = newData[category].filter((row) => row.id !== rowId);
     });
     setData(newData);
-    map.removeInteraction(drawRef.current);
+
+    if (drawRef.current) map.removeInteraction(drawRef.current);
 
     if (openDropdownRowId === rowId) {
       setOpenDropdownRowId(null);
@@ -204,7 +215,6 @@ const DataMenu = () => {
     }
   };
 
-  const [allSelected, setAllSelected] = useState(false);
   const handleSelectAllToggle = () => {
     const items = Object.values(data)
       .flat()
@@ -214,18 +224,14 @@ const DataMenu = () => {
           item.id !== activeDrawingRow
       );
     items.forEach((item) => handleCheckboxChange(item.id, !allSelected));
-    setAllSelected(!allSelected);
+    setAllSelected((prev) => !prev);
   };
 
   const handleAddItem = async (item) => {
     try {
       setData((prevData) => {
         const category = item.type === "Features" ? "Features" : "Activities";
-
-        return {
-          ...prevData,
-          [category]: [...prevData[category], item],
-        };
+        return { ...prevData, [category]: [...prevData[category], item] };
       });
       showSnackbar(`${item.name} was successfully added!`);
     } catch (error) {
@@ -241,60 +247,58 @@ const DataMenu = () => {
     );
   };
 
-  useEffect(() => {
-    if (!openDropdownRowId) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      setOpenDropdownRowId(null);
-      setUserOpenedDropdown(false);
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [openDropdownRowId]);
-
-  const filteredData = data[selectedCategory]
-    .filter(
-      (row) =>
-        row.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        row.id !== activeDrawingRow
-    )
-    .sort((a, b) => {
-      switch (sortOption) {
-        case "Name":
-          return a.name.localeCompare(b.name);
-        case "Color":
-          return a.color.localeCompare(b.color);
-        case "Active":
-          return (
-            (visibilityMap[b.id] ?? false) - (visibilityMap[a.id] ?? false)
-          );
-        case "Inactive":
-          return (
-            (visibilityMap[a.id] ?? false) - (visibilityMap[b.id] ?? false)
-          );
-        case "Drawings":
-          return (
-            drawnFeatures.filter((f) => f.get("id") === b.id).length -
-            drawnFeatures.filter((f) => f.get("id") === a.id).length
-          );
-        case "Recent":
-          if (a.id === lastSelectedId) return -1;
-          if (b.id === lastSelectedId) return 1;
-          return 0;
-        default:
-          return 0;
-      }
-    });
+  const filteredData = useMemo(() => {
+    return data[selectedCategory]
+      .filter(
+        (row) =>
+          row.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          row.id !== activeDrawingRow
+      )
+      .sort((a, b) => {
+        switch (sortOption) {
+          case "Name":
+            return a.name.localeCompare(b.name);
+          case "Color":
+            return a.color.localeCompare(b.color);
+          case "Active":
+            return (
+              (visibilityMap[b.id] ?? false) - (visibilityMap[a.id] ?? false)
+            );
+          case "Inactive":
+            return (
+              (visibilityMap[a.id] ?? false) - (visibilityMap[b.id] ?? false)
+            );
+          case "Drawings":
+            return (
+              drawnFeatures.filter((f) => f.get("id") === b.id).length -
+              drawnFeatures.filter((f) => f.get("id") === a.id).length
+            );
+          case "Recent":
+            if (a.id === lastSelectedId) return -1;
+            if (b.id === lastSelectedId) return 1;
+            return 0;
+          default:
+            return 0;
+        }
+      });
+  }, [
+    data,
+    selectedCategory,
+    searchQuery,
+    drawnFeatures,
+    visibilityMap,
+    lastSelectedId,
+    activeDrawingRow,
+    sortOption,
+  ]);
 
   const stickyRow = activeDrawingRow
     ? Object.values(data)
         .flat()
         .find((row) => row.id === activeDrawingRow)
     : null;
+
+  const toggleOpen = () => setIsOpen((prev) => !prev);
 
   return (
     <Box
@@ -317,6 +321,7 @@ const DataMenu = () => {
         transition: "max-height 0.4s ease, bgcolor 0.3s ease",
       }}
     >
+      {/* Toggle Menu Button */}
       <Button
         onClick={toggleOpen}
         variant="contained"
@@ -338,8 +343,10 @@ const DataMenu = () => {
         {isOpen ? "Hide Menu" : "Show Menu"}
       </Button>
 
+      {/* Menu Content */}
       {isOpen && (
         <>
+          {/* Tabs and Sorting */}
           <Box
             sx={{
               display: "flex",
@@ -359,11 +366,13 @@ const DataMenu = () => {
             />
           </Box>
 
+          {/* Search Field */}
           <SearchField
             searchQuery={searchQuery}
             onSearchChange={(e) => setSearchQuery(e.target.value)}
           />
 
+          {/* Sticky Row */}
           {stickyRow && (
             <Box sx={{ mb: 2 }}>
               <DataRow
@@ -379,6 +388,7 @@ const DataMenu = () => {
             </Box>
           )}
 
+          {/* Scrollable Data Rows */}
           <Box
             ref={scrollContainerRef}
             sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}
@@ -447,6 +457,7 @@ const DataMenu = () => {
 
           <Divider />
 
+          {/* Bottom Action Grid */}
           <Box
             sx={{
               mt: 3,
@@ -592,9 +603,11 @@ const DataMenu = () => {
             </Box>
           </Box>
 
+          {/* Finish Session & User Info */}
           <FinishSessionButton onFinish={handleFinishSession} />
           <UserInfo />
 
+          {/* Confirm Dialog */}
           <ConfirmDialog
             open={confirmOpen}
             onClose={() => setConfirmOpen(false)}

@@ -5,41 +5,41 @@ const Joystick = ({ map, size = 90 }) => {
   const knobRef = useRef(null);
   const velocityRef = useRef({ x: 0, y: 0 });
   const maxRadius = 35;
-  let pointerId = null;
-
-  const getVelocity = (dx, dy) => {
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance > maxRadius) {
-      const scale = maxRadius / distance;
-      dx *= scale;
-      dy *= scale;
-    }
-
-    const zoom = map.getView().getZoom();
-    const baseSpeed = 0.01;
-    const damping = 1 / Math.pow(2, zoom - 5);
-    let velocity = {
-      x: dx * baseSpeed * damping,
-      y: -dy * baseSpeed * damping,
-    };
-
-    const factor = Math.pow(distance / maxRadius, 2.5);
-    velocity = { x: velocity.x * factor, y: velocity.y * factor };
-
-    return velocity;
-  };
 
   useEffect(() => {
     const joystick = joystickRef.current;
     const knob = knobRef.current;
-
+    let pointerId = null;
     let rafId;
+
+    const getVelocity = (dx, dy) => {
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > maxRadius) {
+        const scale = maxRadius / distance;
+        dx *= scale;
+        dy *= scale;
+      }
+
+      const zoom = map.getView().getZoom();
+      const baseSpeed = 0.01;
+      const damping = 1 / Math.pow(2, zoom - 5);
+      let velocity = {
+        x: dx * baseSpeed * damping,
+        y: -dy * baseSpeed * damping,
+      };
+
+      const factor = Math.pow(distance / maxRadius, 2.5);
+      velocity = { x: velocity.x * factor, y: velocity.y * factor };
+
+      return velocity;
+    };
 
     const onPointerDown = (e) => {
       pointerId = e.pointerId;
       joystick.setPointerCapture(pointerId);
       e.preventDefault();
     };
+
     const onPointerMove = (e) => {
       if (pointerId !== e.pointerId) return;
       const rect = joystick.getBoundingClientRect();
@@ -57,6 +57,7 @@ const Joystick = ({ map, size = 90 }) => {
       velocityRef.current = getVelocity(dx, dy);
       e.preventDefault();
     };
+
     const onPointerUp = (e) => {
       if (pointerId !== e.pointerId) return;
       pointerId = null;

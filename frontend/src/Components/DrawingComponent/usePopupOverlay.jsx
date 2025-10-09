@@ -39,7 +39,6 @@ export const PopupContent = ({
 
   const scale = Math.min(Math.max(zoom / 10, 0.8), 1.5);
   const fontSize = isSmall ? 12 * scale : 14 * scale;
-  const sliderSize = Math.max(8 * scale, 6);
 
   return (
     <Box
