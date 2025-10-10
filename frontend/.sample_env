@@ -1,2 +1,2 @@
 REACT_APP_MAPBOX_TOKEN = "example mapbox token "
-REACT_APP_API_BASE_URL =http://vmai02.datascienceinstitute.ie:5001/
+REACT_APP_API_BASE_URL =http://127.0.0.1:5001
