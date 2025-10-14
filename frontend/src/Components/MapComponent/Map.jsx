@@ -24,7 +24,10 @@ const MapComponent = () => {
 
   useEffect(() => {
     const baseLayer = new TileLayer({ source: getTileLayerSource("streets") });
+
     const rasterLayer = mapBoxRasterLayer;
+    rasterLayer.setVisible(false);
+
     const vectorSource = new VectorSource({ wrapX: false });
     const vectorLayer = new VectorLayer({ source: vectorSource });
 
@@ -32,8 +35,8 @@ const MapComponent = () => {
       target: mapRef.current,
       layers: [baseLayer, rasterLayer, vectorLayer],
       view: new View({
-        center: [-26.3, 59.99],
-        zoom: 5,
+        center: [10, 50],
+        zoom: 2,
         constrainOnlyCenter: true,
       }),
       controls: defaultControls({ zoom: false, rotate: false }),
@@ -41,6 +44,18 @@ const MapComponent = () => {
         new PinchZoom(),
       ]),
     });
+
+    const worldExtent = [-180, -90, 180, 90];
+    map.getView().fit(worldExtent, {
+      size: map.getSize(),
+      padding: [20, 20, 20, 20],
+      constrainResolution: true,
+      nearest: true,
+    });
+
+    const view = map.getView();
+    const [x, y] = view.getCenter();
+    view.setCenter([x, y + 20]);
 
     setMap(map);
     setVectorSource(vectorSource);

@@ -4,8 +4,7 @@ import WebGLTileLayer from "ol/layer/WebGLTile.js";
 import XYZ from "ol/source/XYZ.js";
 
 const TILE_SOURCE = "mapbox";
-const MAPBOX_PUBLIC_ACCESS_TOKEN =
-  "pk.eyJ1IjoiYWxhbnJlaWR5IiwiYSI6ImNtNXdpd2RxczA5NmIyb3NjbHB3aWJ3bjcifQ.Ew9OYib3ETPK0cwUUWhPcA";
+const MAPBOX_PUBLIC_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 const MAPBOX_USER = "craicerjack";
 const TILESET_ID = "impact_e0db42b42ced448fafbb6d66a";
 const MAPBOX_STYLE = "streets-v12";
