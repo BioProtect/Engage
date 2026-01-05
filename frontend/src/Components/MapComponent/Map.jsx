@@ -14,6 +14,7 @@ import Joystick from "./Joystick";
 import ZoomControls from "./ZoomControls";
 import ExtraMapControls from "./ExtraMapControls";
 import GeoTiffSelector from "./GeoTiffSelector";
+import ScaleLineControl from "./ScaleLineControl";
 
 const MapComponent = () => {
   const mapRef = useRef(null);
@@ -35,8 +36,8 @@ const MapComponent = () => {
       target: mapRef.current,
       layers: [baseLayer, rasterLayer, vectorLayer],
       view: new View({
-        center: [10, 50],
-        zoom: 2,
+        center: [-8.0, 53.0],
+        zoom: 4,
         constrainOnlyCenter: true,
       }),
       controls: defaultControls({ zoom: false, rotate: false }),
@@ -44,18 +45,6 @@ const MapComponent = () => {
         new PinchZoom(),
       ]),
     });
-
-    const worldExtent = [-180, -90, 180, 90];
-    map.getView().fit(worldExtent, {
-      size: map.getSize(),
-      padding: [20, 20, 20, 20],
-      constrainResolution: true,
-      nearest: true,
-    });
-
-    const view = map.getView();
-    const [x, y] = view.getCenter();
-    view.setCenter([x, y + 20]);
 
     setMap(map);
     setVectorSource(vectorSource);
@@ -84,7 +73,7 @@ const MapComponent = () => {
             right: `calc(10px + env(safe-area-inset-right, 0px))`,
             display: "flex",
             flexDirection: "column",
-            alignItems: "flex-end",
+            alignItems: "center",
             gap: "15px",
             zIndex: 1000,
             padding: "12px",
@@ -93,8 +82,11 @@ const MapComponent = () => {
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
             backdropFilter: "blur(8px)",
             maxHeight: "80vh",
+            minWidth: "fit-content",
           }}
         >
+          <ScaleLineControl map={mapInstance} />
+
           <Joystick
             map={mapInstance}
             size={Math.min(90, window.innerHeight * 0.15)}
@@ -110,7 +102,9 @@ const MapComponent = () => {
               display: "flex",
               flexDirection: "row",
               alignItems: "center",
+              justifyContent: "center",
               gap: "10px",
+              flexWrap: "wrap",
             }}
           >
             <GeoTiffSelector
