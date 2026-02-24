@@ -23,6 +23,7 @@ import SetMealIcon from "@mui/icons-material/SetMeal";
 import ClearIcon from "@mui/icons-material/Clear";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { save_drawing_item } from "../../Api/DataMenuApi";
+import { useColorContext } from "../../Contexts/ColorContext";
 
 const MAX_LENGTHS = {
   Name: 10,
@@ -31,6 +32,7 @@ const MAX_LENGTHS = {
 
 const AddNewItem = ({ onAdd }) => {
   const { isAuthenticated } = useAuth();
+  const { generateColor } = useColorContext();
 
   const [showModal, setShowModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -120,7 +122,13 @@ const AddNewItem = ({ onAdd }) => {
         type: newItem.Category,
       });
 
-      onAdd(savedFeature.feature);
+      const featureWithColor = {
+        ...savedFeature.feature,
+        color: generateColor(savedFeature.feature.id),
+      };
+
+      onAdd(featureWithColor);
+
       setShowModal(false);
       setNewItem({
         Name: "",

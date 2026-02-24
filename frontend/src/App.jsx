@@ -3,6 +3,7 @@ import Map from "./Components/MapComponent/Map";
 import DataMenu from "./Components/DataMenuComponents/DataMenu";
 import { MapProvider } from "./Contexts/MapContext";
 import { AuthProvider } from "./Contexts/AuthenticationContext";
+import { ColorProvider } from "./Contexts/ColorContext";
 import Draw from "./Components/DrawingComponent/Draw";
 import "./App.css";
 
@@ -19,20 +20,23 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <MapProvider>
-        <div
-          style={{
-            width: "100vw",
-            height: "calc(var(--vh, 1vh) * 100)",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <Map />
-          <DataMenu />
-          <Draw />
-        </div>
-      </MapProvider>
+      <ColorProvider>
+        {" "}
+        <MapProvider>
+          <div
+            style={{
+              width: "100vw",
+              height: "calc(var(--vh, 1vh) * 100)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <Map />
+            <DataMenu />
+            <Draw />
+          </div>
+        </MapProvider>
+      </ColorProvider>
     </AuthProvider>
   );
 };

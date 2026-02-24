@@ -24,6 +24,7 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
 import ConfirmDialog from "./ConfirmDialog";
+import { useColorContext } from "../../Contexts/ColorContext";
 
 const fallbackData = {
   Features: [
@@ -88,6 +89,90 @@ const fallbackData = {
       color: "#FFD700",
       description: "The movement of air from high to low pressure areas.",
     },
+
+    {
+      id: 14,
+      name: "Dredging (shellfish)",
+      color: "#8B0000",
+      description:
+        "Mechanical removal of shellfish from the seabed using dredging gear.",
+    },
+    {
+      id: 15,
+      name: "Finfish aquaculture",
+      color: "#20B2AA",
+      description:
+        "Farming of finfish species in marine or coastal environments.",
+    },
+    {
+      id: 16,
+      name: "Harvesting - seaweed and other sea-based food (bird eggs, shellfish, etc.)",
+      color: "#6B8E23",
+      description:
+        "Collection of seaweed and other marine-based food resources from coastal areas.",
+    },
+    {
+      id: 17,
+      name: "Demersal trawling",
+      color: "#A52A2A",
+      description:
+        "Bottom trawling targeting species that live on or near the seabed.",
+    },
+    {
+      id: 18,
+      name: "Line fishing",
+      color: "#1E90FF",
+      description: "Fishing method using baited hooks attached to lines.",
+    },
+    {
+      id: 19,
+      name: "Set (fixed) net fishing",
+      color: "#4682B4",
+      description:
+        "Fishing using stationary nets placed in specific locations.",
+    },
+    {
+      id: 20,
+      name: "Shellfish aquaculture: Suspended rope/net culture",
+      color: "#9370DB",
+      description:
+        "Shellfish farming method where shellfish are grown on suspended ropes or nets.",
+    },
+    {
+      id: 21,
+      name: "Shellfish aquaculture: Trestle culture",
+      color: "#BA55D3",
+      description:
+        "Shellfish farming method using trestles or racks in intertidal areas.",
+    },
+    {
+      id: 22,
+      name: "Traps",
+      color: "#CD853F",
+      description:
+        "Fishing method using baited traps or pots to capture marine species.",
+    },
+    {
+      id: 23,
+      name: "Vessel moorings",
+      color: "#708090",
+      description:
+        "Anchoring or securing vessels in a fixed position in coastal or marine areas.",
+    },
+    {
+      id: 24,
+      name: "Vessel movements",
+      color: "#2F4F4F",
+      description:
+        "Navigation and transit of vessels through marine or coastal waters.",
+    },
+    {
+      id: 25,
+      name: "Leisure (e.g. swimming, rock pooling)",
+      color: "#FF69B4",
+      description:
+        "Recreational activities conducted in coastal and marine environments.",
+    },
   ],
 };
 
@@ -111,6 +196,7 @@ const DataMenu = () => {
     onConfirm: () => {},
   });
   const [allSelected, setAllSelected] = useState(false);
+  const { generateColor } = useColorContext();
 
   const categoryList = ["Features", "Activities"];
 
@@ -136,12 +222,12 @@ const DataMenu = () => {
         setIsLoading(true);
         const fetchedData = await get_drawing_items();
         const transform = (arr) =>
-          arr.map(({ id, name, description, color, type }) => ({
+          arr.map(({ id, name, description, type }, index) => ({
             id,
             name,
             description,
-            color,
             type,
+            color: generateColor(id),
           }));
 
         const formattedData = {
@@ -221,7 +307,7 @@ const DataMenu = () => {
       .filter(
         (item) =>
           drawnFeatures.some((f) => f.get("id") === item.id) &&
-          item.id !== activeDrawingRow
+          item.id !== activeDrawingRow,
       );
     items.forEach((item) => handleCheckboxChange(item.id, !allSelected));
     setAllSelected((prev) => !prev);
@@ -243,7 +329,7 @@ const DataMenu = () => {
     setActiveDrawingRow(null);
     drawRef.current?.setActive(false);
     drawnFeatures.forEach((feature) =>
-      handleCheckboxChange(feature.get("id"), false)
+      handleCheckboxChange(feature.get("id"), false),
     );
   };
 
@@ -252,7 +338,7 @@ const DataMenu = () => {
       .filter(
         (row) =>
           row.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          row.id !== activeDrawingRow
+          row.id !== activeDrawingRow,
       )
       .sort((a, b) => {
         switch (sortOption) {

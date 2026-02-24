@@ -111,7 +111,7 @@ def get_drawing_items():
 
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-            cur.execute("SELECT id, name, description, color, type FROM drawingitems;")
+            cur.execute("SELECT id, name, description, type FROM drawingitems;")
             rows = cur.fetchall()
             features = [dict(row) for row in rows if row['type'] == 'Features']
             activities = [dict(row) for row in rows if row['type'] == 'Activities']
@@ -121,14 +121,6 @@ def get_drawing_items():
         return jsonify({"error": str(e)}), 500
 
 # -------------------- Save/Delete Drawing Items --------------------
-def generate_unique_color(cur):
-    for _ in range(10):
-        color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
-        cur.execute("SELECT 1 FROM drawingitems WHERE color = %s", (color,))
-        if cur.fetchone() is None:
-            return color
-    raise Exception("Could not generate unique color")
-
 @app.route('/save_drawing_item', methods=['POST'])
 def save_drawing_item():
     if conn is None:
@@ -144,28 +136,29 @@ def save_drawing_item():
 
     try:
         with conn.cursor() as cur:
+            # Check for duplicate name
             cur.execute("SELECT 1 FROM drawingitems WHERE name = %s", (name,))
             if cur.fetchone():
                 return jsonify({"error": "Name already exists"}), 409
 
-            color = generate_unique_color(cur)
             cur.execute("""
-                INSERT INTO drawingitems (name, description, color, type)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, name, description, color, type
-            """, (name, description, color, type_))
+                INSERT INTO drawingitems (name, description, type)
+                VALUES (%s, %s, %s)
+                RETURNING id, name, description, type
+            """, (name, description, type_))
             inserted = cur.fetchone()
             conn.commit()
 
         return jsonify({
             "message": "Feature saved successfully",
-            "feature": dict(zip(["id", "name", "description", "color", "type"], inserted))
+            "feature": dict(zip(["id", "name", "description", "type"], inserted))
         }), 201
 
     except Exception as e:
         conn.rollback()
         print(f"Error saving drawing item: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/delete_drawing_item/<int:item_id>', methods=['DELETE'])
 def delete_drawing_item(item_id):
