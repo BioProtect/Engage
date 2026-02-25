@@ -9,11 +9,14 @@ import { defaults as defaultInteractions } from "ol/interaction.js";
 import PinchZoom from "ol/interaction/PinchZoom.js";
 import { useGeographic } from "ol/proj.js";
 import { useMapContext } from "../../Contexts/MapContext";
-import { getTileLayerSource, mapBoxRasterLayer } from "./BaseMapLayers";
+import { getTileLayerSource, availableLayers } from "./BaseMapLayers";
 import Joystick from "./Joystick";
 import ZoomControls from "./ZoomControls";
 import ExtraMapControls from "./ExtraMapControls";
 import GeoTiffSelector from "./GeoTiffSelector";
+import ScaleLineControl from "./ScaleLineControl";
+import LocationSearch from "./LocationSearch";
+import MiniMap from "./MiniMap";
 
 const MapComponent = () => {
   const mapRef = useRef(null);
@@ -23,17 +26,21 @@ const MapComponent = () => {
   useGeographic();
 
   useEffect(() => {
-    const baseLayer = new TileLayer({ source: getTileLayerSource("streets") });
-    const rasterLayer = mapBoxRasterLayer;
+    const baseLayer = new TileLayer({ source: getTileLayerSource() });
+
     const vectorSource = new VectorSource({ wrapX: false });
     const vectorLayer = new VectorLayer({ source: vectorSource });
 
+    availableLayers.forEach((layerObj) => layerObj.layer.setVisible(false));
+
     const map = new Map({
       target: mapRef.current,
-      layers: [baseLayer, rasterLayer, vectorLayer],
+      layers: [baseLayer, ...availableLayers.map((l) => l.layer), vectorLayer],
       view: new View({
-        center: [-26.3, 59.99],
-        zoom: 5,
+        center: [-8.0, 53.0],
+        zoom: 3,
+        minZoom: 3,
+        maxZoom: 24,
         constrainOnlyCenter: true,
       }),
       controls: defaultControls({ zoom: false, rotate: false }),
@@ -44,7 +51,6 @@ const MapComponent = () => {
 
     setMap(map);
     setVectorSource(vectorSource);
-    setGeoTiffLayer(rasterLayer);
     setMapInstance(map);
 
     return () => map.setTarget(null);
@@ -61,6 +67,8 @@ const MapComponent = () => {
         }}
       />
 
+      {mapInstance && <MiniMap mainMap={mapInstance} />}
+
       {mapInstance && (
         <div
           style={{
@@ -69,7 +77,7 @@ const MapComponent = () => {
             right: `calc(10px + env(safe-area-inset-right, 0px))`,
             display: "flex",
             flexDirection: "column",
-            alignItems: "flex-end",
+            alignItems: "center",
             gap: "15px",
             zIndex: 1000,
             padding: "12px",
@@ -78,8 +86,13 @@ const MapComponent = () => {
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
             backdropFilter: "blur(8px)",
             maxHeight: "80vh",
+            minWidth: "fit-content",
           }}
         >
+          <LocationSearch mapInstance={mapInstance} />
+
+          <ScaleLineControl map={mapInstance} />
+
           <Joystick
             map={mapInstance}
             size={Math.min(90, window.innerHeight * 0.15)}
@@ -95,13 +108,16 @@ const MapComponent = () => {
               display: "flex",
               flexDirection: "row",
               alignItems: "center",
+              justifyContent: "center",
               gap: "10px",
+              flexWrap: "wrap",
             }}
           >
             <GeoTiffSelector
               mapInstance={mapInstance}
               setGeoTiffLayer={setGeoTiffLayer}
             />
+
             <ExtraMapControls map={mapInstance} />
           </div>
         </div>

@@ -15,37 +15,54 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import LayersIcon from "@mui/icons-material/Layers";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import { availableLayers } from "./BaseMapLayers";
 
 const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   const [anchorEl, setAnchorEl] = useState(null);
-  const [activeLayer, setActiveLayer] = useState("Mapbox Raster");
-  const [layerVisible, setLayerVisible] = useState(true);
+  const [activeLayers, setActiveLayers] = useState(new Set());
 
   const handleOpen = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const handleSelectLayer = (name) => {
+  const toggleLayer = (name) => {
     if (!mapInstance) return;
-
-    availableLayers.forEach(({ layer }) => layer.setVisible(false));
     const selected = availableLayers.find((l) => l.name === name);
-    if (selected) selected.layer.setVisible(true);
-
-    setActiveLayer(name);
-    setGeoTiffLayer(selected.layer);
-    setLayerVisible(true);
-  };
-
-  const toggleLayerVisibility = () => {
-    const selected = availableLayers.find((l) => l.name === activeLayer);
     if (!selected) return;
 
-    selected.layer.setVisible(!layerVisible);
-    setLayerVisible(!layerVisible);
+    const newActiveLayers = new Set(activeLayers);
+    if (newActiveLayers.has(name)) {
+      newActiveLayers.delete(name);
+      selected.layer.setVisible(false);
+    } else {
+      newActiveLayers.add(name);
+      selected.layer.setVisible(true);
+    }
+
+    setActiveLayers(newActiveLayers);
+    setGeoTiffLayer(selected.layer);
+  };
+
+  const toggleAllLayers = () => {
+    if (!mapInstance) return;
+    const allOn = activeLayers.size === availableLayers.length;
+    const newActiveLayers = new Set();
+    availableLayers.forEach(({ layer, name }) => {
+      const shouldTurnOn = !allOn;
+      layer.setVisible(shouldTurnOn);
+      if (shouldTurnOn) newActiveLayers.add(name);
+    });
+    setActiveLayers(newActiveLayers);
   };
 
   const open = Boolean(anchorEl);
+
+  let toggleAllIcon;
+  if (activeLayers.size === 0)
+    toggleAllIcon = <LayersClearIcon color="error" />;
+  else if (activeLayers.size === availableLayers.length)
+    toggleAllIcon = <LayersIcon color="primary" />;
+  else toggleAllIcon = <LayersOutlinedIcon color="warning" />;
 
   return (
     <>
@@ -55,7 +72,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
           onClick={open ? handleClose : handleOpen}
           sx={{ bgcolor: "white", "&:hover": { bgcolor: "#f3f5f7" } }}
         >
-          {layerVisible ? (
+          {activeLayers.size > 0 ? (
             <LayersIcon color="primary" />
           ) : (
             <LayersClearIcon color="error" />
@@ -74,16 +91,16 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
         ]}
       >
         <Paper
-          elevation={3}
+          elevation={4}
           sx={{
             borderRadius: 2,
-            p: 1.5,
-            minWidth: 220,
-            bgcolor: "rgba(255, 255, 255, 0.75)",
-            backdropFilter: "blur(10px)",
+            p: 2,
+            minWidth: 260,
+            bgcolor: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(8px)",
             position: "relative",
-            boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-            fontSize: "0.85rem",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            fontSize: "0.9rem",
             "&::before": {
               content: '""',
               position: "absolute",
@@ -94,38 +111,28 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
               height: 0,
               borderLeft: "8px solid transparent",
               borderRight: "8px solid transparent",
-              borderTop: "8px solid rgba(255,255,255,0.75)",
+              borderTop: "8px solid rgba(255,255,255,0.95)",
             },
           }}
         >
           {/* Header */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mb: 1,
-              position: "relative",
-            }}
-          >
-            <IconButton
-              size="small"
-              onClick={toggleLayerVisibility}
-              sx={{ p: 0.4, position: "absolute", left: 0 }}
-            >
-              {layerVisible ? (
-                <LayersIcon color="primary" />
-              ) : (
-                <LayersClearIcon color="error" />
-              )}
-            </IconButton>
-
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
             <Typography
-              variant="subtitle2"
-              sx={{ fontWeight: 600, textAlign: "center" }}
+              variant="subtitle1"
+              sx={{ flexGrow: 1, fontWeight: 600, textAlign: "center" }}
             >
               GeoTIFF Layers
             </Typography>
+
+            <Tooltip title="Toggle All Layers">
+              <IconButton
+                size="small"
+                onClick={toggleAllLayers}
+                sx={{ mr: 0.5 }}
+              >
+                {toggleAllIcon}
+              </IconButton>
+            </Tooltip>
 
             <IconButton
               size="small"
@@ -133,8 +140,6 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
               sx={{
                 p: 0.4,
                 color: "#555",
-                position: "absolute",
-                right: 0,
                 "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
               }}
             >
@@ -142,32 +147,69 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
             </IconButton>
           </Box>
 
-          <Divider sx={{ mb: 1.2, borderColor: "rgba(0,0,0,0.1)" }} />
+          <Divider sx={{ mb: 1, borderColor: "rgba(0,0,0,0.1)" }} />
 
-          {/* Layer list */}
-          <List dense>
-            {availableLayers.map(({ name }) => (
-              <ListItem key={name} disablePadding>
-                <ListItemButton
-                  selected={activeLayer === name}
-                  onClick={() => handleSelectLayer(name)}
-                  sx={{
-                    "&.Mui-selected": {
-                      bgcolor: "rgba(33, 150, 243, 0.12)",
-                      "&:hover": { bgcolor: "rgba(33, 150, 243, 0.2)" },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary={name}
-                    primaryTypographyProps={{
-                      align: "center",
-                      fontSize: "0.85rem",
+          <List
+            dense
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              maxHeight: 300,
+              overflowY: "auto",
+              pr: 0.5,
+            }}
+          >
+            {availableLayers.map(({ name }) => {
+              const isActive = activeLayers.has(name);
+              return (
+                <ListItem key={name} disablePadding>
+                  <Paper
+                    elevation={isActive ? 3 : 1}
+                    sx={{
+                      flexGrow: 1,
+                      width: "100%",
+                      borderRadius: 1.5,
+                      bgcolor: isActive
+                        ? "rgba(33,150,243,0.08)"
+                        : "rgba(255,255,255,0.6)",
+                      transition: "all 0.2s",
+                      "&:hover": { bgcolor: "rgba(33,150,243,0.15)" },
                     }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
+                  >
+                    <ListItemButton
+                      selected={isActive}
+                      onClick={() => toggleLayer(name)}
+                      sx={{ py: 0.8 }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            {isActive ? (
+                              <LayersIcon color="primary" fontSize="small" />
+                            ) : (
+                              <LayersClearIcon color="error" fontSize="small" />
+                            )}
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500 }}
+                            >
+                              {name}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItemButton>
+                  </Paper>
+                </ListItem>
+              );
+            })}
           </List>
         </Paper>
       </Popper>

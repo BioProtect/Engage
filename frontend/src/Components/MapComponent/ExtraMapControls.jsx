@@ -7,8 +7,7 @@ const ExtraMapControls = ({ map }) => {
   const handleHome = () => {
     if (map) {
       const view = map.getView();
-      const worldExtent = [-180, -90, 180, 90];
-      view.fit(worldExtent, { duration: 500 });
+      view.animate({ center: [-8, 53], zoom: 4, duration: 500 });
     }
   };
 

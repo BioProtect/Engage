@@ -16,6 +16,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { Tooltip } from "@mui/material";
 
 const allOverlays = [];
 
@@ -39,7 +40,6 @@ export const PopupContent = ({
 
   const scale = Math.min(Math.max(zoom / 10, 0.8), 1.5);
   const fontSize = isSmall ? 12 * scale : 14 * scale;
-  const sliderSize = Math.max(8 * scale, 6);
 
   return (
     <Box
@@ -198,22 +198,26 @@ export const PopupContent = ({
         </Typography>
       </Box>
 
-      {/* Action buttons */}
+      {/* Save/delete buttons */}
       <Stack
         direction="row"
         spacing={1}
         justifyContent="center"
         sx={{ mb: 0, transform: `scale(${scale})` }}
       >
-        <IconButton
-          color="primary"
-          onClick={onSave}
-          aria-label="save"
-          size="small"
-          sx={{ p: "4px" }}
-        >
-          <SaveIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title="Save changes">
+          {" "}
+          <IconButton
+            color="primary"
+            onClick={onSave}
+            aria-label="save"
+            size="small"
+            sx={{ p: "4px" }}
+          >
+            <SaveIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
         <IconButton
           color="error"
           onClick={onDelete}
