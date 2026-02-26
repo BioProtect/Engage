@@ -1,180 +1,31 @@
-import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Divider,
   IconButton,
-  Tooltip,
-  CircularProgress,
-  Typography,
   Switch,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import AddItemDialog from "./AddItemDialog";
 import CategoryTabs from "./CategoryTabs";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import ConfirmDialog from "./ConfirmDialog";
 import DataRow from "./DataRow";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import FinishSessionButton from "./FinishButton";
 import SearchField from "./Search";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SortSelect from "./SortSelect";
-import { useMapContext } from "../../Contexts/MapContext";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
-import ConfirmDialog from "./ConfirmDialog";
 import { useColorContext } from "../../Contexts/ColorContext";
-
-const fallbackData = {
-  Features: [
-    {
-      id: 1,
-      name: "Coral Reef",
-      color: "#FF6666",
-      description: "A diverse underwater ecosystem found in warm ocean waters.",
-    },
-    {
-      id: 2,
-      name: "Fresh Water",
-      color: "#8A2BE2",
-      description:
-        "A habitat of rivers, lakes, and ponds that are low in salt content.",
-    },
-    {
-      id: 3,
-      name: "Kelp Forest",
-      color: "#32CD32",
-      description:
-        "A coastal underwater forest of giant kelp plants, home to many species.",
-    },
-    {
-      id: 4,
-      name: "Open Ocean",
-      color: "#1E90FF",
-      description: "The vast, deep waters of the ocean away from the coast.",
-    },
-    {
-      id: 5,
-      name: "Salt Marsh",
-      color: "#D2691E",
-      description:
-        "A coastal ecosystem of salt-tolerant plants and tidal waters.",
-    },
-  ],
-  Activities: [
-    {
-      id: 10,
-      name: "Overfishing",
-      color: "#FF4500",
-      description: "The depletion of fish species due to excessive fishing.",
-    },
-    {
-      id: 11,
-      name: "Pollution",
-      color: "#2E8B57",
-      description:
-        "The introduction of harmful substances into the environment.",
-    },
-    {
-      id: 12,
-      name: "Rain",
-      color: "#4169E1",
-      description:
-        "Precipitation in the form of water droplets falling from the sky.",
-    },
-    {
-      id: 13,
-      name: "Wind",
-      color: "#FFD700",
-      description: "The movement of air from high to low pressure areas.",
-    },
-
-    {
-      id: 14,
-      name: "Dredging (shellfish)",
-      color: "#8B0000",
-      description:
-        "Mechanical removal of shellfish from the seabed using dredging gear.",
-    },
-    {
-      id: 15,
-      name: "Finfish aquaculture",
-      color: "#20B2AA",
-      description:
-        "Farming of finfish species in marine or coastal environments.",
-    },
-    {
-      id: 16,
-      name: "Harvesting - seaweed and other sea-based food (bird eggs, shellfish, etc.)",
-      color: "#6B8E23",
-      description:
-        "Collection of seaweed and other marine-based food resources from coastal areas.",
-    },
-    {
-      id: 17,
-      name: "Demersal trawling",
-      color: "#A52A2A",
-      description:
-        "Bottom trawling targeting species that live on or near the seabed.",
-    },
-    {
-      id: 18,
-      name: "Line fishing",
-      color: "#1E90FF",
-      description: "Fishing method using baited hooks attached to lines.",
-    },
-    {
-      id: 19,
-      name: "Set (fixed) net fishing",
-      color: "#4682B4",
-      description:
-        "Fishing using stationary nets placed in specific locations.",
-    },
-    {
-      id: 20,
-      name: "Shellfish aquaculture: Suspended rope/net culture",
-      color: "#9370DB",
-      description:
-        "Shellfish farming method where shellfish are grown on suspended ropes or nets.",
-    },
-    {
-      id: 21,
-      name: "Shellfish aquaculture: Trestle culture",
-      color: "#BA55D3",
-      description:
-        "Shellfish farming method using trestles or racks in intertidal areas.",
-    },
-    {
-      id: 22,
-      name: "Traps",
-      color: "#CD853F",
-      description:
-        "Fishing method using baited traps or pots to capture marine species.",
-    },
-    {
-      id: 23,
-      name: "Vessel moorings",
-      color: "#708090",
-      description:
-        "Anchoring or securing vessels in a fixed position in coastal or marine areas.",
-    },
-    {
-      id: 24,
-      name: "Vessel movements",
-      color: "#2F4F4F",
-      description:
-        "Navigation and transit of vessels through marine or coastal waters.",
-    },
-    {
-      id: 25,
-      name: "Leisure (e.g. swimming, rock pooling)",
-      color: "#FF69B4",
-      description:
-        "Recreational activities conducted in coastal and marine environments.",
-    },
-  ],
-};
+import { useMapContext } from "../../Contexts/MapContext";
 
 const DataMenu = () => {
   const menuRef = useRef(null);
@@ -220,7 +71,8 @@ const DataMenu = () => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const fetchedData = await get_drawing_items();
+        const fetchedData = get_drawing_items();
+        console.log("fetchedData ", fetchedData);
         const transform = (arr) =>
           arr.map(({ id, name, description, type }, index) => ({
             id,
@@ -235,18 +87,9 @@ const DataMenu = () => {
           Activities: transform(fetchedData?.Activities || []),
         };
 
-        if (
-          formattedData.Features.length === 0 &&
-          formattedData.Activities.length === 0
-        ) {
-          console.warn("Using fallback data (empty API response).");
-          setData(fallbackData);
-        } else {
-          setData(formattedData);
-        }
+        setData(formattedData);
       } catch (err) {
         console.error("Failed to fetch data:", err);
-        setData(fallbackData);
       } finally {
         setIsLoading(false);
       }

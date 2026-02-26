@@ -1,12 +1,13 @@
+import { Fill, Stroke, Style } from "ol/style.js";
 import React, { useEffect, useRef, useState } from "react";
+
+import Feature from "ol/Feature.js";
 import Map from "ol/Map.js";
-import View from "ol/View.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector.js";
 import VectorSource from "ol/source/Vector.js";
-import Feature from "ol/Feature.js";
+import View from "ol/View.js";
 import { fromExtent } from "ol/geom/Polygon.js";
-import { Stroke, Style, Fill } from "ol/style.js";
 import { getTileLayerSource } from "./BaseMapLayers";
 
 const MiniMap = ({
@@ -38,7 +39,7 @@ const MiniMap = ({
         fill: new Fill({
           color: "rgba(0,0,0,0.05)",
         }),
-      })
+      }),
     );
     vectorSource.addFeature(viewportFeature);
     viewportFeatureRef.current = viewportFeature;
@@ -65,7 +66,7 @@ const MiniMap = ({
 
       const newZoom = Math.max(
         mainMap.getView().getZoom() - zoomOutDelta,
-        minZoom
+        minZoom,
       );
       miniMap.getView().setZoom(newZoom);
     };

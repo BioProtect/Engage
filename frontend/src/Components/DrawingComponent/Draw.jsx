@@ -1,12 +1,14 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
 import * as olExtent from "ol/extent";
-import { useMapContext } from "../../Contexts/MapContext";
-import { createFeatureStyle } from "./FeatureStyle";
-import { useDrawingInteraction } from "./useDrawingInteraction";
-import { useSelectionInteraction } from "./useSelectionInteraction";
-import { usePopupOverlay } from "./usePopupOverlay";
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
 import { DistanceTooltip } from "./DistanceTooltip";
 import PinchWarningSnackbar from "./PinchWarningSnackbar";
+import { createFeatureStyle } from "./FeatureStyle";
+import { useDrawingInteraction } from "./useDrawingInteraction";
+import { useMapContext } from "../../Contexts/MapContext";
+import { usePopupOverlay } from "./usePopupOverlay";
+import { useSelectionInteraction } from "./useSelectionInteraction";
 
 const DrawingLayer = () => {
   const {
@@ -57,7 +59,7 @@ const DrawingLayer = () => {
       const featuresForRow = updated
         .filter((f) => f.get("id") === rowId)
         .sort(
-          (a, b) => new Date(a.get("timestamp")) - new Date(b.get("timestamp"))
+          (a, b) => new Date(a.get("timestamp")) - new Date(b.get("timestamp")),
         );
 
       featuresForRow.forEach((f, index) => f.set("drawingNumber", index + 1));
@@ -67,8 +69,8 @@ const DrawingLayer = () => {
             map,
             showLabels: true,
             selected: f === selectedFeature,
-          })
-        )
+          }),
+        ),
       );
 
       return updated;
@@ -137,7 +139,7 @@ const DrawingLayer = () => {
     if (shouldDraw && currentRow) handleCheckboxChange(currentRow, true);
     else if (!shouldDraw && previousRow) {
       const hasDrawings = drawnFeatures.some(
-        (feature) => String(feature.get("id")) === String(previousRow)
+        (feature) => String(feature.get("id")) === String(previousRow),
       );
       if (!hasDrawings) handleCheckboxChange(previousRow, false);
     }

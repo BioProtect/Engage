@@ -1,30 +1,31 @@
-import React, { useState, useEffect } from "react";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Typography,
   IconButton,
-  TextField,
   InputAdornment,
-  Box,
+  TextField,
+  Typography,
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import LoginIcon from "@mui/icons-material/Login";
-import CloseIcon from "@mui/icons-material/Close";
-import GroupIcon from "@mui/icons-material/Group";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import SaveIcon from "@mui/icons-material/Save";
+import React, { useEffect, useState } from "react";
+
+import AuthForm from "../Authentication/AuthForm";
 import CancelIcon from "@mui/icons-material/Cancel";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ClearIcon from "@mui/icons-material/Clear";
+import CloseIcon from "@mui/icons-material/Close";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
+import GroupIcon from "@mui/icons-material/Group";
+import LoginIcon from "@mui/icons-material/Login";
+import SaveIcon from "@mui/icons-material/Save";
+import SuccessSnackbar from "./SnackBar";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { save_polygon } from "../../Api/DataMenuApi";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapContext } from "../../Contexts/MapContext";
-import { save_polygon } from "../../Api/DataMenuApi";
-import AuthForm from "../Authentication/AuthForm";
-import SuccessSnackbar from "./SnackBar";
 
 const FinishSessionButton = ({ onFinish }) => {
   const { isAuthenticated, token, user } = useAuth();
@@ -89,11 +90,7 @@ const FinishSessionButton = ({ onFinish }) => {
 
     try {
       for (const feature of drawnFeatures) {
-        const geometry = feature
-          .getGeometry()
-          .clone()
-          .transform("EPSG:3857", "EPSG:4326")
-          .getCoordinates();
+        const geometry = feature.getGeometry().clone().getCoordinates();
 
         const geojson = {
           type: "Polygon",

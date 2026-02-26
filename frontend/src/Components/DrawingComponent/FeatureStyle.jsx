@@ -1,11 +1,22 @@
 import { Fill, Stroke, Style, Text } from "ol/style";
+
 import { getArea } from "ol/sphere";
 
 const styleCache = {};
 
+// export const formatArea = (polygon) => {
+//   const area = getArea(polygon);
+//   const nf = new Intl.NumberFormat();
+
+//   return area > 1e6
+//     ? `${nf.format((area / 1e6).toFixed(2))} km²`
+//     : `${nf.format(area.toFixed(0))} m²`;
+// };
+
 export const formatArea = (polygon) => {
-  const geom3857 = polygon.clone().transform("EPSG:4326", "EPSG:3857");
-  const area = getArea(geom3857);
+  console.log("polygon ", polygon);
+  // const area = getArea(polygon, { projection: "EPSG:3857" });
+  const area = getArea(polygon, { projection: "EPSG:4326" });
   const nf = new Intl.NumberFormat();
 
   return area > 1e6
@@ -15,7 +26,7 @@ export const formatArea = (polygon) => {
 
 export const createFeatureStyle = (
   feature,
-  { map, showLabels = true, selected = false }
+  { map, showLabels = true, selected = false },
 ) => {
   const color = feature.get("color") || "#000";
   const name = feature.get("name") || "";
@@ -86,7 +97,7 @@ export const createFeatureStyle = (
               overflow: false,
             }),
             zIndex: selected ? 1000 + index : 100 + index,
-          })
+          }),
         );
       }
     });

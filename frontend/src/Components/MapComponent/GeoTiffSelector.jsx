@@ -1,20 +1,21 @@
-import React, { useState } from "react";
 import {
+  Box,
+  Divider,
   IconButton,
-  Popper,
-  Paper,
   List,
   ListItem,
   ListItemButton,
   ListItemText,
-  Divider,
-  Typography,
-  Box,
+  Paper,
+  Popper,
   Tooltip,
+  Typography,
 } from "@mui/material";
+import React, { useState } from "react";
+
 import CloseIcon from "@mui/icons-material/Close";
-import LayersIcon from "@mui/icons-material/Layers";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
+import LayersIcon from "@mui/icons-material/Layers";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import { availableLayers } from "./BaseMapLayers";
 

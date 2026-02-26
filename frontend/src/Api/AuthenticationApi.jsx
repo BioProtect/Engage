@@ -22,15 +22,15 @@ async function handleResponse(response) {
 
 export async function login(username, password) {
   console.log("API base url:", process.env.REACT_APP_API_BASE_URL);
-
   try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${API_BASE_URL}/auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
     return await handleResponse(response);
   } catch (err) {
+    console.log("err ", err);
     if (err instanceof TypeError) {
       throw new Error("Cannot connect to server");
     }

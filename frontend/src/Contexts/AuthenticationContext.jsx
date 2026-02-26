@@ -1,11 +1,12 @@
+import * as api from "../Api/AuthenticationApi";
+
 import React, {
   createContext,
   useContext,
-  useState,
   useEffect,
   useRef,
+  useState,
 } from "react";
-import * as api from "../Api/AuthenticationApi";
 
 const AuthContext = createContext();
 
@@ -34,8 +35,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     const res = await api.login(username, password);
-    if (res.access_token) {
-      setToken(res.access_token);
+    console.log("res ", res);
+    if (res.accessToken) {
+      setToken(res.accessToken);
       setUser({ username });
       localStorage.setItem("loginTimestamp", Date.now().toString());
     } else {
@@ -56,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     if (token && user) {
       const loginTimestamp = parseInt(
         localStorage.getItem("loginTimestamp"),
-        10
+        10,
       );
       if (!loginTimestamp) {
         logout();

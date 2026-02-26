@@ -1,12 +1,14 @@
+import fallbackData from "../data/drawingItems";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-export async function get_drawing_items() {
-  const response = await fetch(`${API_BASE_URL}/get_drawing_items`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch data");
-  }
-  return response.json();
-}
+export const get_drawing_items = () => {
+  // const response = await fetch(`${API_BASE_URL}/get_drawing_items`);
+  // if (!response.ok) {
+  //   throw new Error("Failed to fetch data");
+  // }
+  // return response.json();
+  return fallbackData;
+};
 
 export async function save_drawing_item({ name, description, type }) {
   const response = await fetch(`${API_BASE_URL}/save_drawing_item`, {
@@ -41,12 +43,15 @@ export async function save_polygon({
   name,
   color,
   description = "",
-  density = 0,
+  density = 1,
   timestamp,
   geometry,
   token,
 }) {
-  const response = await fetch(`${API_BASE_URL}/save_polygon`, {
+  name = name + " - " + userGroup;
+  console.log("geometry ", geometry);
+
+  const response = await fetch(`${API_BASE_URL}/engage?action=create-feature`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

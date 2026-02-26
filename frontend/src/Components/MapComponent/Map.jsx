@@ -1,22 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
+import {
+  availableLayers,
+  customBaseLayer,
+  getTileLayerSource,
+} from "./BaseMapLayers";
+
+import ExtraMapControls from "./ExtraMapControls";
+import GeoTiffSelector from "./GeoTiffSelector";
+import Joystick from "./Joystick";
+import LocationSearch from "./LocationSearch";
 import Map from "ol/Map.js";
-import View from "ol/View.js";
+import MiniMap from "./MiniMap";
+import PinchZoom from "ol/interaction/PinchZoom.js";
+import ScaleLineControl from "./ScaleLineControl";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector.js";
 import VectorSource from "ol/source/Vector.js";
+import View from "ol/View.js";
+import ZoomControls from "./ZoomControls";
 import { defaults as defaultControls } from "ol/control.js";
 import { defaults as defaultInteractions } from "ol/interaction.js";
-import PinchZoom from "ol/interaction/PinchZoom.js";
 import { useGeographic } from "ol/proj.js";
 import { useMapContext } from "../../Contexts/MapContext";
-import { getTileLayerSource, availableLayers } from "./BaseMapLayers";
-import Joystick from "./Joystick";
-import ZoomControls from "./ZoomControls";
-import ExtraMapControls from "./ExtraMapControls";
-import GeoTiffSelector from "./GeoTiffSelector";
-import ScaleLineControl from "./ScaleLineControl";
-import LocationSearch from "./LocationSearch";
-import MiniMap from "./MiniMap";
 
 const MapComponent = () => {
   const mapRef = useRef(null);
@@ -37,8 +42,8 @@ const MapComponent = () => {
       target: mapRef.current,
       layers: [baseLayer, ...availableLayers.map((l) => l.layer), vectorLayer],
       view: new View({
-        center: [-8.0, 53.0],
-        zoom: 3,
+        center: [-9.8, 53.3],
+        zoom: 12,
         minZoom: 3,
         maxZoom: 24,
         constrainOnlyCenter: true,

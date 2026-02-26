@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import Draw from "ol/interaction/Draw";
 import { formatArea } from "./FeatureStyle";
+import { getArea } from "ol/sphere";
 
 export const useDrawingInteraction = ({
   map,
@@ -54,6 +56,7 @@ export const useDrawingInteraction = ({
     });
 
     draw.on("drawend", (evt) => {
+      console.log("evt ", evt);
       if (pointerMoveHandler) {
         map.un("pointermove", pointerMoveHandler);
         pointerMoveHandler = null;
@@ -62,7 +65,6 @@ export const useDrawingInteraction = ({
       setTooltipText("");
 
       const feature = evt.feature;
-
       const existing = vectorSource
         .getFeatures()
         .filter((f) => f.get("id") === idRef.current);

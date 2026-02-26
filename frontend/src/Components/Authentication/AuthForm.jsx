@@ -1,23 +1,24 @@
-import React, { useState } from "react";
 import {
-  TextField,
-  Button,
-  Box,
-  InputAdornment,
-  IconButton,
   Alert,
-  Tabs,
+  Box,
+  Button,
+  IconButton,
+  InputAdornment,
   Tab,
+  Tabs,
+  TextField,
   Typography,
 } from "@mui/material";
-import { useAuth } from "../../Contexts/AuthenticationContext";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
-import PersonIcon from "@mui/icons-material/Person";
-import LoginIcon from "@mui/icons-material/Login";
+import React, { useState } from "react";
+
+import CloseIcon from "@mui/icons-material/Close";
 import HowToRegIcon from "@mui/icons-material/HowToReg";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
+import LoginIcon from "@mui/icons-material/Login";
+import PersonIcon from "@mui/icons-material/Person";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import CloseIcon from "@mui/icons-material/Close";
+import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapContext } from "../../Contexts/MapContext";
 
 const AuthForm = ({ onSuccess }) => {
@@ -40,7 +41,8 @@ const AuthForm = ({ onSuccess }) => {
 
     try {
       if (isLogin) {
-        await login(username, password);
+        const res = await login(username, password);
+        console.log("res ", res);
         onSuccess?.();
         showSnackbar(username + " has logged in!");
       } else {
@@ -58,7 +60,7 @@ const AuthForm = ({ onSuccess }) => {
 
   return (
     <Box sx={{ width: 320, px: 0, py: 0 }}>
-      <Box
+      {/* <Box
         sx={{
           display: "flex",
           alignItems: "center",
@@ -78,7 +80,7 @@ const AuthForm = ({ onSuccess }) => {
         <Typography variant="h5" component="h1" sx={{ fontWeight: "bold" }}>
           {isLogin ? "Login" : "Sign Up"}
         </Typography>
-      </Box>
+      </Box> */}
 
       <Tabs
         value={tabIndex}
@@ -100,12 +102,12 @@ const AuthForm = ({ onSuccess }) => {
           iconPosition="start"
           sx={{ fontWeight: "bold" }}
         />
-        <Tab
+        {/* <Tab
           label="Sign Up"
           icon={<HowToRegIcon />}
           iconPosition="start"
           sx={{ fontWeight: "bold" }}
-        />
+        /> */}
       </Tabs>
 
       <Box
