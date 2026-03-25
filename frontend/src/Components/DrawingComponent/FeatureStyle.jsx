@@ -14,7 +14,6 @@ const styleCache = {};
 // };
 
 export const formatArea = (polygon) => {
-  console.log("polygon ", polygon);
   // const area = getArea(polygon, { projection: "EPSG:3857" });
   const area = getArea(polygon, { projection: "EPSG:4326" });
   const nf = new Intl.NumberFormat();

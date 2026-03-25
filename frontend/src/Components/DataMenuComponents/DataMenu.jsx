@@ -72,7 +72,6 @@ const DataMenu = () => {
       try {
         setIsLoading(true);
         const fetchedData = get_drawing_items();
-        console.log("fetchedData ", fetchedData);
         const transform = (arr) =>
           arr.map(({ id, name, description, type }, index) => ({
             id,
@@ -178,10 +177,8 @@ const DataMenu = () => {
 
   const filteredData = useMemo(() => {
     return data[selectedCategory]
-      .filter(
-        (row) =>
-          row.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          row.id !== activeDrawingRow,
+      .filter((row) =>
+        row.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
       .sort((a, b) => {
         switch (sortOption) {
@@ -217,15 +214,8 @@ const DataMenu = () => {
     drawnFeatures,
     visibilityMap,
     lastSelectedId,
-    activeDrawingRow,
     sortOption,
   ]);
-
-  const stickyRow = activeDrawingRow
-    ? Object.values(data)
-        .flat()
-        .find((row) => row.id === activeDrawingRow)
-    : null;
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
 
@@ -243,7 +233,7 @@ const DataMenu = () => {
         boxShadow: 3,
         width: { xs: "60vw", sm: "45vw", md: "40vw", lg: "370px" },
         maxWidth: 360,
-        maxHeight: isOpen ? "77vh" : stickyRow ? "25vh" : "8vh",
+        maxHeight: isOpen ? "77vh" : "8vh",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -300,22 +290,6 @@ const DataMenu = () => {
             searchQuery={searchQuery}
             onSearchChange={(e) => setSearchQuery(e.target.value)}
           />
-
-          {/* Sticky Row */}
-          {stickyRow && (
-            <Box sx={{ mb: 2 }}>
-              <DataRow
-                row={stickyRow}
-                deleteRow={deleteRow}
-                openDropdownRowId={openDropdownRowId}
-                setOpenDropdownRowId={setOpenDropdownRowId}
-                dropdownAnchor={dropdownAnchor}
-                setDropdownAnchor={setDropdownAnchor}
-                userOpenedDropdown={userOpenedDropdown}
-                setUserOpenedDropdown={setUserOpenedDropdown}
-              />
-            </Box>
-          )}
 
           {/* Scrollable Data Rows */}
           <Box

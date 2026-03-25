@@ -37,6 +37,15 @@ export async function delete_drawing_item(id) {
   return response.json();
 }
 
+export async function get_planning_unit_layers() {
+  const response = await fetch(`${API_BASE_URL}/planning-units?action=list`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch planning unit layers");
+  }
+  const data = await response.json();
+  return data.planning_unit_grids;
+}
+
 export async function save_polygon({
   user,
   userGroup,

@@ -11,24 +11,44 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { availableLayers, createPlanningUnitLayer } from "./BaseMapLayers";
 
 import CloseIcon from "@mui/icons-material/Close";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
 import LayersIcon from "@mui/icons-material/Layers";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
-import { availableLayers } from "./BaseMapLayers";
+import { get_planning_unit_layers } from "../../Api/DataMenuApi";
 
 const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeLayers, setActiveLayers] = useState(new Set());
+  const [allLayers, setAllLayers] = useState(availableLayers);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    get_planning_unit_layers()
+      .then((grids) => {
+        console.log("grids ", grids);
+        const puLayers = grids
+          .filter((g) => g.tilesetid)
+          .map((g) => createPlanningUnitLayer(g.tilesetid, g.alias));
+
+        puLayers.forEach(({ layer }) => mapInstance.addLayer(layer));
+        setAllLayers([...availableLayers, ...puLayers]);
+      })
+      .catch((err) =>
+        console.error("Failed to load planning unit layers:", err),
+      );
+  }, [mapInstance]);
 
   const handleOpen = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
   const toggleLayer = (name) => {
     if (!mapInstance) return;
-    const selected = availableLayers.find((l) => l.name === name);
+    const selected = allLayers.find((l) => l.name === name);
     if (!selected) return;
 
     const newActiveLayers = new Set(activeLayers);
@@ -46,9 +66,9 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
 
   const toggleAllLayers = () => {
     if (!mapInstance) return;
-    const allOn = activeLayers.size === availableLayers.length;
+    const allOn = activeLayers.size === allLayers.length;
     const newActiveLayers = new Set();
-    availableLayers.forEach(({ layer, name }) => {
+    allLayers.forEach(({ layer, name }) => {
       const shouldTurnOn = !allOn;
       layer.setVisible(shouldTurnOn);
       if (shouldTurnOn) newActiveLayers.add(name);
@@ -61,7 +81,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   let toggleAllIcon;
   if (activeLayers.size === 0)
     toggleAllIcon = <LayersClearIcon color="error" />;
-  else if (activeLayers.size === availableLayers.length)
+  else if (activeLayers.size === allLayers.length)
     toggleAllIcon = <LayersIcon color="primary" />;
   else toggleAllIcon = <LayersOutlinedIcon color="warning" />;
 
@@ -161,7 +181,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
               pr: 0.5,
             }}
           >
-            {availableLayers.map(({ name }) => {
+            {allLayers.map(({ name }) => {
               const isActive = activeLayers.has(name);
               return (
                 <ListItem key={name} disablePadding>
