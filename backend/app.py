@@ -39,11 +39,14 @@ except OperationalError as e:
 
 # -------------------- ROUTES --------------------
 
+
 @app.route('/')
 def home():
     return "Hello, Flask!"
 
 # -------------------- Signup --------------------
+
+
 @app.route('/signup', methods=['POST'])
 def signup():
     if conn is None:
@@ -74,6 +77,8 @@ def signup():
         return jsonify({"msg": "Sign up failed", "error": str(e)}), 500
 
 # -------------------- Login --------------------
+
+
 @app.route('/login', methods=['POST'])
 def login():
     if conn is None:
@@ -104,6 +109,8 @@ def login():
     return jsonify(access_token=access_token), 200
 
 # -------------------- Get Drawing Items --------------------
+
+
 @app.route('/get_drawing_items', methods=['GET'])
 def get_drawing_items():
     if conn is None:
@@ -111,16 +118,20 @@ def get_drawing_items():
 
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-            cur.execute("SELECT id, name, description, type FROM drawingitems;")
+            cur.execute(
+                "SELECT id, name, description, type FROM drawingitems;")
             rows = cur.fetchall()
             features = [dict(row) for row in rows if row['type'] == 'Features']
-            activities = [dict(row) for row in rows if row['type'] == 'Activities']
+            activities = [dict(row)
+                          for row in rows if row['type'] == 'Activities']
             return jsonify({"Features": features, "Activities": activities})
     except Exception as e:
         print(f"Error fetching drawing items: {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------- Save/Delete Drawing Items --------------------
+
+
 @app.route('/save_drawing_item', methods=['POST'])
 def save_drawing_item():
     if conn is None:
@@ -167,7 +178,8 @@ def delete_drawing_item(item_id):
 
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM drawingitems WHERE id = %s RETURNING id;", (item_id,))
+            cur.execute(
+                "DELETE FROM drawingitems WHERE id = %s RETURNING id;", (item_id,))
             deleted = cur.fetchone()
             if deleted is None:
                 return jsonify({"error": "Item not found"}), 404
@@ -179,6 +191,8 @@ def delete_drawing_item(item_id):
         return jsonify({"error": str(e)}), 500
 
 # -------------------- Save Polygon --------------------
+
+
 @app.route('/save_polygon', methods=['POST'])
 def save_polygon():
     if conn is None:
@@ -221,16 +235,19 @@ def save_polygon():
 
                 index_name = f"idx_{uuid.uuid4().hex}"
                 cur.execute(
-                    sql.SQL("CREATE INDEX {} ON bioprotect.{} USING GIST (geometry);")
+                    sql.SQL(
+                        "CREATE INDEX {} ON bioprotect.{} USING GIST (geometry);")
                     .format(sql.Identifier(index_name), sql.Identifier(feature_class_name))
                 )
 
                 cur.execute(
-                    sql.SQL("ALTER TABLE bioprotect.{} DROP COLUMN IF EXISTS id, DROP COLUMN IF EXISTS ogc_fid;")
+                    sql.SQL(
+                        "ALTER TABLE bioprotect.{} DROP COLUMN IF EXISTS id, DROP COLUMN IF EXISTS ogc_fid;")
                     .format(sql.Identifier(feature_class_name))
                 )
                 cur.execute(
-                    sql.SQL("ALTER TABLE bioprotect.{} ADD COLUMN id SERIAL PRIMARY KEY;")
+                    sql.SQL(
+                        "ALTER TABLE bioprotect.{} ADD COLUMN id SERIAL PRIMARY KEY;")
                     .format(sql.Identifier(feature_class_name))
                 )
 
@@ -255,6 +272,26 @@ def save_polygon():
         conn.rollback()
         print(f"Error saving polygon: {e}")
         return jsonify({"error": str(e)}), 500
+
+# -------------------- Get Planning Unit Layers --------------------
+
+
+@app.route('/get_planning_unit_layers', methods=['GET'])
+def get_planning_unit_layers():
+    if conn is None:
+        return jsonify({"error": "Database connection not established"}), 500
+
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+            cur.execute("SELECT * FROM bioprotect.get_pu_grids();")
+            rows = cur.fetchall()
+            print('rows: ', rows)
+            grids = [dict(row) for row in rows]
+        return jsonify({"planning_unit_grids": grids}), 200
+    except Exception as e:
+        print(f"Error fetching planning unit layers: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 # -------------------- MAIN --------------------
 if __name__ == '__main__':
