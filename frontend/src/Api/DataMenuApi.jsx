@@ -46,6 +46,15 @@ export async function get_planning_unit_layers() {
   return data.planning_unit_grids;
 }
 
+export async function get_feature_layers() {
+  const response = await fetch(`${API_BASE_URL}/engage?action=list-features`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch feature layers");
+  }
+  const data = await response.json();
+  return data.features;
+}
+
 export async function save_polygon({
   user,
   userGroup,
@@ -55,10 +64,10 @@ export async function save_polygon({
   density = 1,
   timestamp,
   geometry,
+  euniscombd = null,
   token,
 }) {
   name = name + " - " + userGroup;
-  console.log("geometry ", geometry);
 
   const response = await fetch(`${API_BASE_URL}/engage?action=create-feature`, {
     method: "POST",
@@ -75,18 +84,53 @@ export async function save_polygon({
       density,
       timestamp,
       geometry,
+      euniscombd,
     }),
   });
 
   if (!response.ok) {
-    console.log("Token:", token);
-    console.log("Headers:", {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    });
-
     const errorData = await response.json();
     throw new Error(errorData.error || "Failed to save polygon");
+  }
+
+  return response.json();
+}
+
+export async function save_activity({
+  user,
+  userGroup,
+  name,
+  description = "",
+  density = 1,
+  timestamp,
+  geometry,
+  token,
+}) {
+  name = name + " - " + userGroup;
+
+  const response = await fetch(
+    `${API_BASE_URL}/engage?action=create-activity`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        user,
+        userGroup,
+        name,
+        description,
+        density,
+        timestamp,
+        geometry,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to save activity");
   }
 
   return response.json();

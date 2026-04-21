@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import Draw from "ol/interaction/Draw";
 import { formatArea } from "./FeatureStyle";
-import { getArea } from "ol/sphere";
 
 export const useDrawingInteraction = ({
   map,
@@ -10,6 +9,8 @@ export const useDrawingInteraction = ({
   colorRef,
   idRef,
   nameRef,
+  eunisCombdRef,
+  featureTypeRef,
   setDrawnFeatures,
   handleCheckboxChange,
   selectRef,
@@ -78,6 +79,8 @@ export const useDrawingInteraction = ({
       feature.set("timestamp", new Date().toISOString());
       feature.set("drawingNumber", drawingNumber);
       feature.set("areaLabel", geom ? formatArea(geom) : "");
+      feature.set("euniscombd", eunisCombdRef?.current || null);
+      feature.set("featureType", featureTypeRef?.current || null);
 
       feature.setStyle(createFeatureStyle(feature, { map }));
 
@@ -104,6 +107,8 @@ export const useDrawingInteraction = ({
     selectRef,
     setSelectedFeature,
     createFeatureStyle,
+    eunisCombdRef,
+    featureTypeRef,
   ]);
 
   useEffect(() => {

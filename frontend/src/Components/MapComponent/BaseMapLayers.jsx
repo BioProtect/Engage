@@ -10,7 +10,11 @@ const MAPBOX_PUBLIC_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 const MAPBOX_USER = "craicerjack";
 const TILESET_ID = "impact_e0db42b42ced448fafbb6d66a";
 const MAPBOX_STYLE = "streets-v12";
-const MARTIN_BASE_URL = "http://localhost:3000";
+//####################################################################################
+// const MARTIN_BASE_URL = "http://localhost:3000";
+const MARTIN_BASE_URL = process.env.REACT_APP_MARTIN_BASE_URL;
+console.log("MARTIN_BASE_URL ", MARTIN_BASE_URL);
+//####################################################################################
 
 export const getTileLayerSource = () =>
   TILE_SOURCE === "mapbox"

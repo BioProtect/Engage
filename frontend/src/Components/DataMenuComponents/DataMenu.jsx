@@ -95,7 +95,7 @@ const DataMenu = () => {
     };
 
     loadData();
-  }, []);
+  }, [generateColor]);
 
   useEffect(() => {
     if (activeDrawingRow) setLastSelectedId(activeDrawingRow);
@@ -319,6 +319,7 @@ const DataMenu = () => {
                 <DataRow
                   key={row.id}
                   row={row}
+                  featureType={selectedCategory}
                   deleteRow={deleteRow}
                   openDropdownRowId={openDropdownRowId}
                   setOpenDropdownRowId={setOpenDropdownRowId}

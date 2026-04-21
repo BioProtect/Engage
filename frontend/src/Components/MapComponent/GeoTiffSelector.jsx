@@ -11,37 +11,77 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { availableLayers, createPlanningUnitLayer } from "./BaseMapLayers";
 
 import CloseIcon from "@mui/icons-material/Close";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
 import LayersIcon from "@mui/icons-material/Layers";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
-import { get_planning_unit_layers } from "../../Api/DataMenuApi";
+import { get_feature_layers } from "../../Api/DataMenuApi";
+import { useAuth } from "../../Contexts/AuthenticationContext";
 
 const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeLayers, setActiveLayers] = useState(new Set());
-  const [allLayers, setAllLayers] = useState(availableLayers);
+  // base layers + saved feature layers (loaded once on mount)
+  const [featureLayers, setFeatureLayers] = useState([]);
+  // the single project PU layer object (updated when project changes)
+  const [puLayerObj, setPuLayerObj] = useState(null);
 
+  const { project } = useAuth();
+  const puTilesetId = project?.pu_tilesetid ?? null;
+  const puAlias = project?.pu_alias ?? "Planning Units";
+
+  // Derived list shown in the selector
+  const allLayers = useMemo(
+    () =>
+      puLayerObj
+        ? [...availableLayers, puLayerObj, ...featureLayers]
+        : [...availableLayers, ...featureLayers],
+    [puLayerObj, featureLayers],
+  );
+
+  // Effect 1: load saved feature layers once when the map is ready
   useEffect(() => {
     if (!mapInstance) return;
 
-    get_planning_unit_layers()
-      .then((grids) => {
-        console.log("grids ", grids);
-        const puLayers = grids
-          .filter((g) => g.tilesetid)
-          .map((g) => createPlanningUnitLayer(g.tilesetid, g.alias));
+    const added = [];
 
-        puLayers.forEach(({ layer }) => mapInstance.addLayer(layer));
-        setAllLayers([...availableLayers, ...puLayers]);
+    get_feature_layers()
+      .then((features) => {
+        const layers = features
+          .filter((f) => f.tilesetid)
+          .map((f) => {
+            const obj = createPlanningUnitLayer(f.tilesetid, f.alias);
+            mapInstance.addLayer(obj.layer);
+            added.push(obj.layer);
+            return obj;
+          });
+        setFeatureLayers(layers);
       })
-      .catch((err) =>
-        console.error("Failed to load planning unit layers:", err),
-      );
+      .catch((err) => console.error("Failed to load feature layers:", err));
+
+    return () => {
+      added.forEach((layer) => mapInstance.removeLayer(layer));
+    };
   }, [mapInstance]);
+
+  // Effect 2: add / swap the project PU layer when it changes
+  useEffect(() => {
+    if (!mapInstance || !puTilesetId) {
+      setPuLayerObj(null);
+      return;
+    }
+
+    const obj = createPlanningUnitLayer(puTilesetId, puAlias);
+    mapInstance.addLayer(obj.layer);
+    setPuLayerObj(obj);
+
+    return () => {
+      mapInstance.removeLayer(obj.layer);
+    };
+  }, [mapInstance, puTilesetId, puAlias]);
 
   const handleOpen = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);

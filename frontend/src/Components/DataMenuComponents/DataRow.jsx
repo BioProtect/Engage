@@ -26,6 +26,7 @@ import ConfirmDialog from "./ConfirmDialog";
 
 const DataRow = ({
   row,
+  featureType,
   deleteRow,
   openDropdownRowId,
   setOpenDropdownRowId,
@@ -58,6 +59,8 @@ const DataRow = ({
     handleCheckboxChange,
     setActiveColor,
     setActiveName,
+    setActiveEunisCode,
+    setActiveFeatureType,
     showSnackbar,
   } = useMapContext();
 
@@ -102,12 +105,16 @@ const DataRow = ({
   const handleSetActive = () => {
     if (activeDrawingRow === row.id) {
       setActiveDrawingRow(null);
+      setActiveEunisCode(null);
+      setActiveFeatureType(null);
       setOpenDropdownRowId(null);
       setDropdownAnchor(null);
     } else {
       setActiveDrawingRow(row.id);
       setActiveColor(row.color);
       setActiveName(row.name);
+      setActiveEunisCode(row.eunis2022code || null);
+      setActiveFeatureType(featureType || null);
       setOpenDropdownRowId(null);
       setDropdownAnchor(null);
     }

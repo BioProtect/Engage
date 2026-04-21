@@ -20,6 +20,8 @@ const DrawingLayer = () => {
     activeColor,
     activeDrawingRow,
     activeName,
+    activeEunisCode,
+    activeFeatureType,
     handleCheckboxChange,
     visibilityMap,
     selectedFeature,
@@ -31,12 +33,16 @@ const DrawingLayer = () => {
   const colorRef = useRef(activeColor);
   const idRef = useRef(activeDrawingRow);
   const nameRef = useRef(activeName);
+  const eunisCombdRef = useRef(activeEunisCode);
+  const featureTypeRef = useRef(activeFeatureType);
 
   useEffect(() => {
     colorRef.current = activeColor;
     idRef.current = activeDrawingRow;
     nameRef.current = activeName;
-  }, [activeColor, activeDrawingRow, activeName]);
+    eunisCombdRef.current = activeEunisCode;
+    featureTypeRef.current = activeFeatureType;
+  }, [activeColor, activeDrawingRow, activeName, activeEunisCode, activeFeatureType]);
 
   const [density, setDensity] = useState(1);
   const [description, setDescription] = useState("");
@@ -101,6 +107,8 @@ const DrawingLayer = () => {
     colorRef,
     idRef,
     nameRef,
+    eunisCombdRef,
+    featureTypeRef,
     setDrawnFeatures,
     handleCheckboxChange,
     selectRef,

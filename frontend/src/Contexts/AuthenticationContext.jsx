@@ -18,14 +18,20 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem("user");
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [project, setProject] = useState(() => {
+    const savedProject = localStorage.getItem("project");
+    return savedProject ? JSON.parse(savedProject) : null;
+  });
 
   const logoutTimeoutRef = useRef(null);
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setProject(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("project");
     localStorage.removeItem("loginTimestamp");
     if (logoutTimeoutRef.current) {
       clearTimeout(logoutTimeoutRef.current);
@@ -39,6 +45,7 @@ export const AuthProvider = ({ children }) => {
     if (res.accessToken) {
       setToken(res.accessToken);
       setUser({ username });
+      setProject(res.project || null);
       localStorage.setItem("loginTimestamp", Date.now().toString());
     } else {
       throw new Error(res.msg || "Login failed");
@@ -98,6 +105,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (project) {
+      localStorage.setItem("project", JSON.stringify(project));
+    } else {
+      localStorage.removeItem("project");
+    }
+  }, [project]);
+
   const isAuthenticated = !!token && !!user;
 
   return (
@@ -109,6 +124,8 @@ export const AuthProvider = ({ children }) => {
         logout,
         token,
         user,
+        project,
+        setProject,
       }}
     >
       {children}

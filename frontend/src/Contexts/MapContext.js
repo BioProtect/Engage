@@ -22,6 +22,8 @@ export const MapProvider = ({ children }) => {
   const [activeDrawingRow, setActiveDrawingRow] = useState(null);
   const [activeColor, setActiveColor] = useState(null);
   const [activeName, setActiveName] = useState(null);
+  const [activeEunisCode, setActiveEunisCode] = useState(null);
+  const [activeFeatureType, setActiveFeatureType] = useState(null);
 
   const [selectedFeature, setSelectedFeature] = useState(null);
 
@@ -97,6 +99,10 @@ export const MapProvider = ({ children }) => {
         setActiveColor,
         activeName,
         setActiveName,
+        activeEunisCode,
+        setActiveEunisCode,
+        activeFeatureType,
+        setActiveFeatureType,
         selectedFeature,
         setSelectedFeature,
         showSnackbar,

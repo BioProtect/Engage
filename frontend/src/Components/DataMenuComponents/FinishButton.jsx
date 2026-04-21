@@ -23,7 +23,7 @@ import LoginIcon from "@mui/icons-material/Login";
 import SaveIcon from "@mui/icons-material/Save";
 import SuccessSnackbar from "./SnackBar";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import { save_polygon } from "../../Api/DataMenuApi";
+import { save_activity, save_polygon } from "../../Api/DataMenuApi";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapContext } from "../../Contexts/MapContext";
 
@@ -102,18 +102,34 @@ const FinishSessionButton = ({ onFinish }) => {
         const description = feature.get("description") || "";
         const density = feature.get("density") || 0;
         const timestamp = feature.get("timestamp");
+        const euniscombd = feature.get("euniscombd") || null;
+        const featureType = feature.get("featureType");
 
-        await save_polygon({
-          userGroup,
-          user: user?.username,
-          name,
-          color,
-          description,
-          density,
-          timestamp,
-          geometry: geojson,
-          token,
-        });
+        if (featureType === "Activities") {
+          await save_activity({
+            userGroup,
+            user: user?.username,
+            name,
+            description,
+            density,
+            timestamp,
+            geometry: geojson,
+            token,
+          });
+        } else {
+          await save_polygon({
+            userGroup,
+            user: user?.username,
+            name,
+            color,
+            description,
+            density,
+            timestamp,
+            geometry: geojson,
+            euniscombd,
+            token,
+          });
+        }
       }
 
       clearAllDrawings();
