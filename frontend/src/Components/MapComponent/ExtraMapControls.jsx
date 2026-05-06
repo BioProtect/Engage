@@ -2,8 +2,11 @@ import React from "react";
 import { IconButton, Tooltip } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import { useMapContext } from "../../Contexts/MapContext";
 
 const ExtraMapControls = ({ map }) => {
+  const { showSnackbar } = useMapContext();
+
   const handleHome = () => {
     if (map) {
       const view = map.getView();
@@ -23,7 +26,7 @@ const ExtraMapControls = ({ map }) => {
       },
       (err) => {
         console.error("Geolocation failed:", err);
-        alert("Unable to get your location.");
+        showSnackbar("Unable to get your location.", "error");
       },
       { enableHighAccuracy: true }
     );

@@ -19,11 +19,10 @@ import LocationSearch from "./LocationSearch";
 import MiniMap from "./MiniMap";
 
 const MapComponent = () => {
+  useGeographic();
   const mapRef = useRef(null);
   const { setMap, setVectorSource, setGeoTiffLayer } = useMapContext();
   const [mapInstance, setMapInstance] = useState(null);
-
-  useGeographic();
 
   useEffect(() => {
     const baseLayer = new TileLayer({ source: getTileLayerSource() });
@@ -54,7 +53,7 @@ const MapComponent = () => {
     setMapInstance(map);
 
     return () => map.setTarget(null);
-  }, [setMap, setVectorSource, setGeoTiffLayer]);
+  }, [setMap, setVectorSource]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -68,6 +67,8 @@ const MapComponent = () => {
       />
 
       {mapInstance && <MiniMap mainMap={mapInstance} />}
+
+      {mapInstance && <ScaleLineControl map={mapInstance} />}
 
       {mapInstance && (
         <div
@@ -90,8 +91,6 @@ const MapComponent = () => {
           }}
         >
           <LocationSearch mapInstance={mapInstance} />
-
-          <ScaleLineControl map={mapInstance} />
 
           <Joystick
             map={mapInstance}

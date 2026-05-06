@@ -45,14 +45,30 @@ const DrawingLayer = () => {
     setDescription(selectedFeature.get("description") ?? "");
   }, [selectedFeature]);
 
-  const handleDelete = useCallback(() => {
-    if (!selectedFeature) return;
+  const handleDelete = useCallback((featureToDelete = selectedFeature) => {
+    if (!featureToDelete || !vectorSource) return;
 
-    const rowId = selectedFeature.get("id");
-    vectorSource.removeFeature(selectedFeature);
+    const rowId = featureToDelete.get("id");
+    const drawingNumber = featureToDelete.get("drawingNumber");
+    const timestamp = featureToDelete.get("timestamp");
+
+    const matchesFeatureToDelete = (feature) =>
+      feature === featureToDelete ||
+      (feature.get("id") === rowId &&
+        feature.get("drawingNumber") === drawingNumber &&
+        feature.get("timestamp") === timestamp);
+
+    selectRef.current?.getFeatures().clear();
+    setSelectedFeature(null);
+
+    vectorSource
+      .getFeatures()
+      .filter(matchesFeatureToDelete)
+      .forEach((feature) => vectorSource.removeFeature(feature));
+    vectorSource.changed();
 
     setDrawnFeatures((prev) => {
-      const updated = prev.filter((f) => f !== selectedFeature);
+      const updated = prev.filter((feature) => !matchesFeatureToDelete(feature));
 
       const featuresForRow = updated
         .filter((f) => f.get("id") === rowId)
@@ -66,7 +82,7 @@ const DrawingLayer = () => {
           createFeatureStyle(f, {
             map,
             showLabels: true,
-            selected: f === selectedFeature,
+            selected: false,
           })
         )
       );
@@ -74,9 +90,8 @@ const DrawingLayer = () => {
       return updated;
     });
 
-    setSelectedFeature(null);
-    selectRef.current?.getFeatures().clear();
-    showSnackbar("Successfully deleted drawing!");
+    const name = featureToDelete.get("name") || "Unknown";
+    showSnackbar(`Successfully deleted Drawing ${drawingNumber} of ${name}!`);
   }, [
     selectedFeature,
     vectorSource,
@@ -91,6 +106,7 @@ const DrawingLayer = () => {
     drawRef,
     tooltipCoord,
     tooltipText,
+    isDrawing,
     showPinchWarning,
     setShowPinchWarning,
   } = useDrawingInteraction({
@@ -104,6 +120,7 @@ const DrawingLayer = () => {
     selectRef,
     setSelectedFeature,
     createFeatureStyle,
+    showSnackbar,
   });
 
   useSelectionInteraction({
@@ -182,7 +199,7 @@ const DrawingLayer = () => {
 
   return (
     <>
-      {tooltipCoord && activeDrawingRow && drawRef.current?.getActive() && (
+      {isDrawing && tooltipCoord && activeDrawingRow && (
         <DistanceTooltip
           map={map}
           coordinate={tooltipCoord}

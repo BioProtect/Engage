@@ -4,12 +4,12 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Typography,
   IconButton,
   TextField,
   InputAdornment,
   Box,
+  Divider,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LoginIcon from "@mui/icons-material/Login";
@@ -17,31 +17,22 @@ import CloseIcon from "@mui/icons-material/Close";
 import GroupIcon from "@mui/icons-material/Group";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import SaveIcon from "@mui/icons-material/Save";
-import CancelIcon from "@mui/icons-material/Cancel";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import ClearIcon from "@mui/icons-material/Clear";
+import GestureIcon from "@mui/icons-material/Gesture";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapContext } from "../../Contexts/MapContext";
 import { save_polygon } from "../../Api/DataMenuApi";
 import AuthForm from "../Authentication/AuthForm";
-import SuccessSnackbar from "./SnackBar";
 
 const FinishSessionButton = ({ onFinish }) => {
   const { isAuthenticated, token, user } = useAuth();
-  const { drawnFeatures, vectorSource, setDrawnFeatures } = useMapContext();
+  const { drawnFeatures, vectorSource, setDrawnFeatures, showSnackbar } =
+    useMapContext();
 
   const [openDialog, setOpenDialog] = useState(false);
-  const [isButtonEnabled, setIsButtonEnabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userGroup, setUserGroup] = useState("");
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-
-  useEffect(() => {
-    setIsButtonEnabled(drawnFeatures && drawnFeatures.length > 0);
-  }, [drawnFeatures]);
 
   useEffect(() => {
     const storedGroup = localStorage.getItem("userGroup");
@@ -60,9 +51,7 @@ const FinishSessionButton = ({ onFinish }) => {
       if (drawnFeatures && drawnFeatures.length > 0) {
         setOpenDialog(true);
       } else {
-        setSnackbarMessage("No drawings to save.");
-        setSnackbarSeverity("error");
-        setSnackbarOpen(true);
+        showSnackbar("No drawings to save.", "error");
       }
     } else {
       setOpenDialog(true);
@@ -71,16 +60,12 @@ const FinishSessionButton = ({ onFinish }) => {
 
   const handleSaveSession = async () => {
     if (!token) {
-      setSnackbarMessage("Authentication token missing.");
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
+      showSnackbar("Authentication token missing.", "error");
       return;
     }
 
     if (!userGroup.trim()) {
-      setSnackbarMessage("Please enter the user group before saving.");
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
+      showSnackbar("Please enter the user group before saving.", "error");
       return;
     }
 
@@ -88,48 +73,32 @@ const FinishSessionButton = ({ onFinish }) => {
     localStorage.setItem("userGroup", userGroup);
 
     try {
-      for (const feature of drawnFeatures) {
-        const geometry = feature
-          .getGeometry()
-          .clone()
-          .transform("EPSG:3857", "EPSG:4326")
-          .getCoordinates();
-
-        const geojson = {
-          type: "Polygon",
-          coordinates: geometry,
-        };
-
-        const name = feature.get("name");
-        const color = feature.get("color");
-        const description = feature.get("description") || "";
-        const density = feature.get("density") || 0;
-        const timestamp = feature.get("timestamp");
-
-        await save_polygon({
-          userGroup,
-          user: user?.username,
-          name,
-          color,
-          description,
-          density,
-          timestamp,
-          geometry: geojson,
-          token,
-        });
-      }
+      await Promise.all(
+        drawnFeatures.map((feature) => {
+          const geojson = {
+            type: "Polygon",
+            coordinates: feature.getGeometry().getCoordinates(),
+          };
+          return save_polygon({
+            userGroup,
+            user: user?.username,
+            name: feature.get("name"),
+            color: feature.get("color"),
+            description: feature.get("description") || "",
+            density: feature.get("density") || 0,
+            timestamp: feature.get("timestamp"),
+            geometry: geojson,
+            token,
+          });
+        }),
+      );
 
       clearAllDrawings();
       onFinish();
       setOpenDialog(false);
-
-      setSnackbarMessage("Session Saved Sucessfully!");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
+      showSnackbar("Session Saved Successfully!");
     } catch (err) {
-      setSnackbarMessage(`Failed to save drawings: ${err.message}`);
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
+      showSnackbar(`Failed to save drawings: ${err.message}`, "error");
     } finally {
       setIsSaving(false);
     }
@@ -147,7 +116,9 @@ const FinishSessionButton = ({ onFinish }) => {
         variant="contained"
         color="primary"
         onClick={handleButtonClick}
-        disabled={isAuthenticated ? !isButtonEnabled || isSaving : false}
+        disabled={
+          isAuthenticated ? drawnFeatures.length === 0 || isSaving : false
+        }
         sx={{ marginTop: 2 }}
         startIcon={isAuthenticated ? <CheckCircleIcon /> : <LoginIcon />}
       >
@@ -158,142 +129,258 @@ const FinishSessionButton = ({ onFinish }) => {
           : "Login"}
       </Button>
 
-      {/* ✅ Snackbar */}
-      <SuccessSnackbar
-        open={snackbarOpen}
-        message={snackbarMessage}
-        severity={snackbarSeverity}
-        onClose={() => setSnackbarOpen(false)}
-      />
-
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
+        BackdropProps={{
+          sx: {
+            backgroundColor: "rgba(0,0,0,0.15)",
+            backdropFilter: "blur(4px)",
+          },
+        }}
         PaperProps={{
           sx: {
             m: 2,
-            px: 5,
-            py: 4,
-            borderRadius: 4,
+            borderRadius: 3,
+            background: "rgba(235, 242, 255, 0.55)",
             backdropFilter: "blur(20px)",
-            backgroundColor: "rgba(255, 255, 255, 0.4)",
-            border: "1px solid rgba(255, 255, 255, 0.35)",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.06)",
-            color: "#111",
-            userSelect: "none",
-            minWidth: 400,
+            border: "1px solid rgba(255,255,255,0.6)",
+            boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
+            overflow: "hidden",
+            minWidth: { xs: "80vw", sm: 400 },
+            maxWidth: 440,
           },
         }}
       >
         {isAuthenticated ? (
           <>
-            <DialogTitle
+            <IconButton
+              onClick={handleCloseDialog}
+              disabled={isSaving}
+              size="small"
               sx={{
-                textAlign: "center",
-                fontWeight: "bold",
-                fontSize: 20,
-                position: "relative",
-                pr: 6,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
+                position: "absolute",
+                top: 12,
+                right: 12,
+                color: "rgba(0,0,0,0.4)",
+                bgcolor: "rgba(0,0,0,0.05)",
+                "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
+                zIndex: 1,
               }}
             >
-              <DoneAllIcon color="primary" />
-              Finish Session
-              <IconButton
-                aria-label="close"
-                onClick={handleCloseDialog}
-                sx={{
-                  position: "absolute",
-                  right: 8,
-                  top: 8,
-                  color: "#333",
-                }}
-                disabled={isSaving}
-              >
-                <CloseIcon />
-              </IconButton>
-            </DialogTitle>
+              <CloseIcon fontSize="small" />
+            </IconButton>
 
-            <DialogContent>
-              <Typography variant="body1" sx={{ color: "#111", mb: 2 }}>
-                Please enter your user group to continue.
-              </Typography>
-
-              <TextField
-                fullWidth
-                label="User Group"
-                value={userGroup}
-                onChange={(e) => setUserGroup(e.target.value)}
-                disabled={isSaving}
-                autoFocus
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <GroupIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: userGroup && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setUserGroup("")}
-                        disabled={isSaving}
-                      >
-                        <ClearIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
+            <DialogContent sx={{ pt: 3.5, px: 3.5, pb: 2 }}>
               <Box
-                display="flex"
-                alignItems="center"
-                sx={{ color: "#555", fontSize: 14 }}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  mb: 2.5,
+                }}
               >
-                <WarningAmberIcon sx={{ mr: 1 }} color="warning" />
-                <Typography variant="body2">
-                  Saving will clear all drawings. This action cannot be undone.
+                <Box
+                  sx={{
+                    mb: 1.5,
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, rgba(25,118,210,0.15), rgba(56,142,60,0.2))",
+                    border: "1.5px solid rgba(25,118,210,0.25)",
+                    boxShadow: "0 4px 12px rgba(25,118,210,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <DoneAllIcon sx={{ fontSize: 34, color: "#1976d2" }} />
+                </Box>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  sx={{ color: "#1a1a2e" }}
+                >
+                  Finish Session
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  mb: 2.5,
+                  borderRadius: 2,
+                  bgcolor: "rgba(25,118,210,0.08)",
+                  border: "1px solid rgba(25,118,210,0.18)",
+                }}
+              >
+                <GestureIcon sx={{ fontSize: 18, color: "#1976d2" }} />
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#1565c0", fontWeight: 600 }}
+                >
+                  {drawnFeatures.length} drawing
+                  {drawnFeatures.length !== 1 ? "s" : ""} will be saved
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  borderRadius: 2.5,
+                  background: "rgba(255,255,255,0.15)",
+                  border: "1px solid rgba(25,118,210,0.15)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 0.75,
+                    mb: 1,
+                  }}
+                >
+                  <GroupIcon sx={{ fontSize: 15, color: "#1976d2" }} />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      color: "#1565c0",
+                      letterSpacing: "0.4px",
+                      textTransform: "uppercase",
+                      fontSize: "0.68rem",
+                    }}
+                  >
+                    User Group
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "rgba(0,0,0,0.55)",
+                    mb: 1.25,
+                    lineHeight: 1.5,
+                    fontSize: "0.82rem",
+                    textAlign: "center",
+                  }}
+                >
+                  Enter the name of who these drawings belong to
+                </Typography>
+                <TextField
+                  fullWidth
+                  value={userGroup}
+                  onChange={(e) => setUserGroup(e.target.value)}
+                  disabled={isSaving}
+                  autoFocus
+                  size="small"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      background: "rgba(255,255,255,0.25)",
+                      backdropFilter: "blur(8px)",
+                      fontSize: "0.875rem",
+                      "& fieldset": { borderColor: "rgba(255,255,255,0.45)" },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255,255,255,0.7)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "rgba(25,118,210,0.5)",
+                      },
+                    },
+                  }}
+                  InputProps={{
+                    endAdornment: userGroup && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setUserGroup("")}
+                          disabled={isSaving}
+                          edge="end"
+                        >
+                          <ClearIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.6,
+                  borderRadius: 2,
+                  bgcolor: "rgba(237,108,2,0.08)",
+                  border: "1px solid rgba(237,108,2,0.2)",
+                }}
+              >
+                <WarningAmberIcon
+                  sx={{ fontSize: 14, color: "warning.main" }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{ color: "warning.main", fontWeight: 600 }}
+                >
+                  Saving will clear all drawings — this cannot be undone
                 </Typography>
               </Box>
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: "space-between" }}>
+            <Divider sx={{ borderColor: "rgba(255,255,255,0.5)", mx: 2 }} />
+
+            <DialogActions
+              sx={{ justifyContent: "center", px: 3, py: 2, gap: 1.5 }}
+            >
               <Button
                 onClick={handleCloseDialog}
-                color="error"
-                variant="contained"
-                startIcon={<CancelIcon />}
-                sx={{
-                  borderRadius: 2,
-                  boxShadow: "0 4px 14px rgba(211, 47, 47, 0.4)",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  px: 5,
-                  py: 1.5,
-                }}
+                variant="outlined"
+                startIcon={<CloseIcon />}
                 disabled={isSaving}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  borderColor: "rgba(0,0,0,0.2)",
+                  color: "text.secondary",
+                  bgcolor: "rgba(255,255,255,0.4)",
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.6)",
+                    borderColor: "rgba(0,0,0,0.3)",
+                  },
+                  px: 2.5,
+                }}
               >
                 Cancel
               </Button>
 
               <Button
                 onClick={handleSaveSession}
-                color="primary"
                 variant="contained"
                 startIcon={<SaveIcon />}
-                sx={{
-                  borderRadius: 2,
-                  boxShadow: "0 4px 14px rgba(25, 118, 210, 0.25)",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  px: 5,
-                  py: 1.5,
-                }}
                 disabled={isSaving || !userGroup.trim()}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+                  boxShadow: "0 4px 12px rgba(25,118,210,0.35)",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #1565c0, #1976d2)",
+                    boxShadow: "0 4px 16px rgba(25,118,210,0.5)",
+                  },
+                  "&:disabled": { background: "rgba(0,0,0,0.12)" },
+                  px: 2.5,
+                }}
               >
                 {isSaving ? "Saving..." : "Save & Clear"}
               </Button>
@@ -301,22 +388,23 @@ const FinishSessionButton = ({ onFinish }) => {
           </>
         ) : (
           <>
-            <DialogTitle>
-              <IconButton
-                aria-label="close"
-                onClick={handleCloseDialog}
-                sx={{ position: "absolute", right: 8, top: 8, color: "#333" }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </DialogTitle>
-
-            <DialogContent>
-              <AuthForm
-                onSuccess={() => {
-                  setOpenDialog(false);
-                }}
-              />
+            <IconButton
+              onClick={handleCloseDialog}
+              size="small"
+              sx={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                color: "rgba(0,0,0,0.4)",
+                bgcolor: "rgba(0,0,0,0.05)",
+                "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
+                zIndex: 1,
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+            <DialogContent sx={{ pt: 3, px: 3, pb: 3 }}>
+              <AuthForm onSuccess={() => setOpenDialog(false)} />
             </DialogContent>
           </>
         )}

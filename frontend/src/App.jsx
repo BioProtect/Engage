@@ -21,7 +21,6 @@ const App = () => {
   return (
     <AuthProvider>
       <ColorProvider>
-        {" "}
         <MapProvider>
           <div
             style={{

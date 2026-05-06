@@ -33,7 +33,6 @@ const PinchWarningSnackbar = ({ open, onClose, duration = 5000 }) => {
           width: 380,
         }}
       >
-        {/* Close button top-right */}
         <IconButton
           onClick={onClose}
           sx={{
@@ -46,12 +45,10 @@ const PinchWarningSnackbar = ({ open, onClose, duration = 5000 }) => {
           <CloseIcon />
         </IconButton>
 
-        {/* Heading */}
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
           Pinch-to-Zoom disabled while drawing
         </Typography>
 
-        {/* Zoom controls row */}
         <Box
           sx={{
             display: "flex",
@@ -82,7 +79,6 @@ const PinchWarningSnackbar = ({ open, onClose, duration = 5000 }) => {
           </Typography>
         </Box>
 
-        {/* Stop drawing row */}
         <Box
           sx={{
             display: "flex",

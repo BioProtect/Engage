@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useCallback,
 } from "react";
 import * as api from "../Api/AuthenticationApi";
 
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
 
   const logoutTimeoutRef = useRef(null);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     localStorage.removeItem("token");
@@ -30,9 +31,9 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(logoutTimeoutRef.current);
       logoutTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     const res = await api.login(username, password);
     if (res.access_token) {
       setToken(res.access_token);
@@ -41,22 +42,22 @@ export const AuthProvider = ({ children }) => {
     } else {
       throw new Error(res.msg || "Login failed");
     }
-  };
+  }, []);
 
-  const signup = async (username, password) => {
+  const signup = useCallback(async (username, password) => {
     const res = await api.signup(username, password);
     if (res.msg === "Signup successful") {
       return;
     } else {
       throw new Error(res.msg || "Signup failed");
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (token && user) {
       const loginTimestamp = parseInt(
         localStorage.getItem("loginTimestamp"),
-        10
+        10,
       );
       if (!loginTimestamp) {
         logout();
@@ -78,7 +79,7 @@ export const AuthProvider = ({ children }) => {
         logoutTimeoutRef.current = null;
       }
     }
-  }, [token, user]);
+  }, [token, user, logout]);
 
   useEffect(() => {
     if (token) {

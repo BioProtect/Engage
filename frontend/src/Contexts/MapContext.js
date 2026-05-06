@@ -3,6 +3,7 @@ import React, {
   useContext,
   useRef,
   useState,
+  useEffect,
   useCallback,
 } from "react";
 import SuccessSnackbar from "../Components/DataMenuComponents/SnackBar";
@@ -13,7 +14,6 @@ export const MapProvider = ({ children }) => {
   const [map, setMap] = useState(null);
   const [vectorSource, setVectorSource] = useState(null);
   const [geoTiffLayer, setGeoTiffLayer] = useState(null);
-  const [geoTiffList, setGeoTiffList] = useState(null);
 
   const drawRef = useRef(null);
   const selectRef = useRef(null);
@@ -29,47 +29,62 @@ export const MapProvider = ({ children }) => {
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [snackbarKey, setSnackbarKey] = useState(0);
 
   const [showLabels, setShowLabels] = useState(true);
 
-  const showSnackbar = useCallback((msg) => {
-    setSnackbarMessage(msg);
-    setSnackbarOpen(true);
+  const drawnFeaturesRef = useRef(drawnFeatures);
+  const selectedFeatureRef = useRef(selectedFeature);
+  const vectorSourceRef = useRef(vectorSource);
+  const visibilityMapRef = useRef(visibilityMap);
+
+  drawnFeaturesRef.current = drawnFeatures;
+  selectedFeatureRef.current = selectedFeature;
+  vectorSourceRef.current = vectorSource;
+  visibilityMapRef.current = visibilityMap;
+
+  const showSnackbar = useCallback((msg, severity = "success") => {
+    setSnackbarOpen(false);
+    setTimeout(() => {
+      setSnackbarMessage(msg);
+      setSnackbarSeverity(severity);
+      setSnackbarKey((k) => k + 1);
+      setSnackbarOpen(true);
+    }, 50);
   }, []);
 
   const closeSnackbar = useCallback(() => {
     setSnackbarOpen(false);
   }, []);
 
-  const handleCheckboxChange = useCallback(
-    (id, isVisible) => {
-      setVisibilityMap((prev) => ({ ...prev, [id]: isVisible }));
+  const handleCheckboxChange = useCallback((id, isVisible) => {
+    setVisibilityMap((prev) => ({ ...prev, [id]: isVisible }));
 
-      drawnFeatures.forEach((feature) => {
-        if (feature.get("id") === id) {
-          if (isVisible) {
-            if (!vectorSource.hasFeature(feature)) {
-              vectorSource.addFeature(feature);
-            }
-          } else {
-            vectorSource.removeFeature(feature);
-            if (selectedFeature === feature) {
-              setSelectedFeature(null);
-              selectRef.current?.getFeatures().clear();
-            }
+    const vs = vectorSourceRef.current;
+    if (!vs) return;
+
+    drawnFeaturesRef.current.forEach((feature) => {
+      if (feature.get("id") === id) {
+        if (isVisible) {
+          if (!vs.hasFeature(feature)) vs.addFeature(feature);
+        } else {
+          vs.removeFeature(feature);
+          if (selectedFeatureRef.current === feature) {
+            setSelectedFeature(null);
+            selectRef.current?.getFeatures().clear();
           }
         }
-      });
-    },
-    [drawnFeatures, selectedFeature, vectorSource]
-  );
+      }
+    });
+  }, []);
 
   const handleCheckboxSelection = useCallback(
     (id) => {
-      const currentlyVisible = visibilityMap[id] !== false;
+      const currentlyVisible = visibilityMapRef.current[id] !== false;
       handleCheckboxChange(id, !currentlyVisible);
     },
-    [visibilityMap, handleCheckboxChange]
+    [handleCheckboxChange],
   );
 
   return (
@@ -81,8 +96,6 @@ export const MapProvider = ({ children }) => {
         setVectorSource,
         geoTiffLayer,
         setGeoTiffLayer,
-        geoTiffList,
-        setGeoTiffList,
         drawRef,
         selectRef,
         drawnFeatures,
@@ -106,8 +119,10 @@ export const MapProvider = ({ children }) => {
     >
       {children}
       <SuccessSnackbar
+        key={snackbarKey}
         open={snackbarOpen}
         message={snackbarMessage}
+        severity={snackbarSeverity}
         onClose={closeSnackbar}
       />
     </MapContext.Provider>

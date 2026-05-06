@@ -55,6 +55,37 @@ const SortSelect = ({ sortOption, onChange }) => {
         value={sortOption}
         onChange={onChange}
         displayEmpty
+        MenuProps={{
+          PaperProps: {
+            sx: {
+              bgcolor: "rgba(235, 242, 255, 0.6)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.5)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              borderRadius: 2,
+              "& .MuiMenuItem-root": {
+                borderRadius: 1,
+                mx: 0.5,
+                "&:hover": { bgcolor: "rgba(25, 118, 210, 0.1)" },
+                "&.Mui-selected": {
+                  bgcolor: "rgba(25, 118, 210, 0.15)",
+                  "&:hover": { bgcolor: "rgba(25, 118, 210, 0.2)" },
+                },
+              },
+            },
+          },
+        }}
+        sx={{
+          bgcolor: "rgba(255,255,255,0.35)",
+          backdropFilter: "blur(6px)",
+          borderRadius: 2,
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "rgba(255,255,255,0.5)",
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "rgba(25, 118, 210, 0.4)",
+          },
+        }}
         renderValue={() => (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ListItemIcon sx={{ minWidth: 26 }}>

@@ -5,10 +5,8 @@ async function handleResponse(response) {
     let errorData;
     try {
       errorData = await response.json();
-      console.log("Error data from backend:", errorData);
     } catch {
       errorData = null;
-      console.log("Failed to parse error JSON");
     }
 
     let errorMessage = errorData?.msg || response.statusText || "API Error";
@@ -21,8 +19,6 @@ async function handleResponse(response) {
 }
 
 export async function login(username, password) {
-  console.log("API base url:", process.env.REACT_APP_API_BASE_URL);
-
   try {
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",

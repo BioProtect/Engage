@@ -11,7 +11,7 @@ const SuccessSnackbar = ({ open, message, onClose, severity = "success" }) => {
   return (
     <Snackbar
       open={open}
-      autoHideDuration={2000}
+      autoHideDuration={3000}
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       sx={{

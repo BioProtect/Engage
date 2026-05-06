@@ -35,6 +35,14 @@ export async function delete_drawing_item(id) {
   return response.json();
 }
 
+export async function get_feature_layers() {
+  const response = await fetch(`${API_BASE_URL}/get_feature_layers`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch feature layers");
+  }
+  return response.json();
+}
+
 export async function save_polygon({
   user,
   userGroup,
@@ -65,12 +73,6 @@ export async function save_polygon({
   });
 
   if (!response.ok) {
-    console.log("Token:", token);
-    console.log("Headers:", {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    });
-
     const errorData = await response.json();
     throw new Error(errorData.error || "Failed to save polygon");
   }

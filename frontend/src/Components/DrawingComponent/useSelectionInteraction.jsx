@@ -16,14 +16,8 @@ export const useSelectionInteraction = ({
 
     selectRef.current = new Select({
       condition: singleClick,
-      style: (feature) => {
-        const isSelected = true;
-        return createFeatureStyle(feature, {
-          map,
-          showLabels,
-          selected: isSelected,
-        });
-      },
+      style: (feature) =>
+        createFeatureStyle(feature, { map, showLabels, selected: true }),
     });
 
     map.addInteraction(selectRef.current);
