@@ -68,6 +68,11 @@ export const useDrawingInteraction = ({
   setSelectedFeature,
   createFeatureStyle,
   showSnackbar,
+  // Ref mirroring the parent's "should the user be drawing right now?" flag.
+  // Used inside `createDraw` so a Draw rebuilt during pinch-zoom recovery
+  // inherits the correct active state (the parent's activation effect won't
+  // re-fire for ref/internal-only changes).
+  shouldDrawRef,
 }) => {
   const drawRef = useRef(null);
   const [tooltipCoord, setTooltipCoord] = useState(null);
@@ -94,7 +99,11 @@ export const useDrawingInteraction = ({
       freehand: true,
     });
 
-    draw.setActive(false);
+    // Default to inactive on first creation; the parent's activation effect
+    // sets it true when a row+color are picked. On a pinch-zoom rebuild,
+    // however, that effect won't re-fire — so seed from the ref so the new
+    // Draw inherits the user's current intent.
+    draw.setActive(!!shouldDrawRef?.current);
 
     let pointerMoveHandler = null;
 
@@ -189,6 +198,7 @@ export const useDrawingInteraction = ({
     eunisCombdRef,
     featureTypeRef,
     showSnackbar,
+    shouldDrawRef,
   ]);
 
   useEffect(() => {

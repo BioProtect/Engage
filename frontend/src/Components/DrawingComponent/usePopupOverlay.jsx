@@ -271,8 +271,12 @@ export const usePopupOverlay = ({
         overlayRef.current = null;
       }
       if (rootRef.current) {
-        queueMicrotask(() => rootRef.current?.unmount());
+        // Capture into a local before nulling — `queueMicrotask` runs later
+        // and would otherwise read `rootRef.current` as null and skip unmount,
+        // leaking the React tree.
+        const rootToUnmount = rootRef.current;
         rootRef.current = null;
+        queueMicrotask(() => rootToUnmount.unmount());
       }
     };
   }, [map]);

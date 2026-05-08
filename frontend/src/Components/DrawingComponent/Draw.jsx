@@ -35,6 +35,9 @@ const DrawingLayer = () => {
   const nameRef = useRef(activeName);
   const eunisCombdRef = useRef(activeEunisCode);
   const featureTypeRef = useRef(activeFeatureType);
+  // Mirrors `shouldDraw` so `useDrawingInteraction` can seed the active state
+  // of a Draw it rebuilds internally (e.g. after pinch-zoom recovery).
+  const shouldDrawRef = useRef(false);
 
   useEffect(() => {
     colorRef.current = activeColor;
