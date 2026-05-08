@@ -1,5 +1,3 @@
-import React, { useState } from "react";
-
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -18,6 +16,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapContext } from "../../Contexts/MapContext";
+import { useState } from "react";
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {

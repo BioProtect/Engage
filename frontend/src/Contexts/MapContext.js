@@ -1,11 +1,12 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
-  useEffect,
-  useCallback,
 } from "react";
+
 import SuccessSnackbar from "../Components/DataMenuComponents/SnackBar";
 
 const MapContext = createContext();
@@ -83,7 +84,7 @@ export const MapProvider = ({ children }) => {
 
   const handleCheckboxSelection = useCallback(
     (id) => {
-      const currentlyVisible = visibilityMapRef.current[id] !== false;
+      const currentlyVisible = visibilityMapRef.current[id] === true;
       handleCheckboxChange(id, !currentlyVisible);
     },
     [handleCheckboxChange],

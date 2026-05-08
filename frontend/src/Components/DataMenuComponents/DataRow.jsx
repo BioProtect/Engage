@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import Box from "@mui/material/Box";
-import Checkbox from "@mui/icons-material/CheckBox";
+import Checkbox from "@mui/material/Checkbox";
 import ClearIcon from "@mui/icons-material/Clear";
 import ConfirmDialog from "./ConfirmDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -185,8 +185,8 @@ const DataRow = ({
             </IconButton>
 
             <Checkbox
-              checked={visibilityMap[row.id] === true}
-              onChange={() => handleCheckboxSelection(row.id)}
+              checked={Boolean(visibilityMap[row.id])}
+              onChange={(e) => handleCheckboxChange(row.id, e.target.checked)}
               size="small"
               disabled={row.id === activeDrawingRow || !canToggleCheckbox}
               sx={{ p: "2px" }}

@@ -291,21 +291,6 @@ const DataMenu = () => {
           />
 
           {/* Scrollable Data Rows */}
-          {stickyRow && (
-            <Box sx={{ mb: 2 }}>
-              <DataRow
-                row={stickyRow}
-                deleteRow={deleteRow}
-                openDropdownRowId={openDropdownRowId}
-                setOpenDropdownRowId={setOpenDropdownRowId}
-                dropdownAnchor={dropdownAnchor}
-                setDropdownAnchor={setDropdownAnchor}
-                userOpenedDropdown={userOpenedDropdown}
-                setUserOpenedDropdown={setUserOpenedDropdown}
-              />
-            </Box>
-          )}
-
           <Box
             ref={scrollContainerRef}
             sx={{

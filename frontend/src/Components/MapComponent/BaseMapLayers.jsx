@@ -74,17 +74,3 @@ export const availableLayers = [
   { name: "Mapbox Raster", layer: mapBoxRasterLayer },
   { name: "INFORMAR Benthic Layer", layer: infomarBenthicLayer },
 ];
-
-export const createPlanningUnitLayer = (tilesetId, alias) => {
-  const layer = new TileLayer({
-    source: new XYZ({
-      url: `https://api.mapbox.com/v4/${tilesetId}/{z}/{x}/{y}@2x.png?access_token=${MAPBOX_PUBLIC_ACCESS_TOKEN}`,
-      tileSize: 512,
-      maxZoom: 22,
-      crossOrigin: "anonymous",
-    }),
-    opacity: 0.7,
-    visible: false,
-  });
-  return { name: alias, layer };
-};
