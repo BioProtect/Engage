@@ -73,11 +73,12 @@ const DataMenu = () => {
         setIsLoading(true);
         const fetchedData = get_drawing_items();
         const transform = (arr) =>
-          arr.map(({ id, name, description, type }, index) => ({
+          arr.map(({ id, name, description, type, eunis2022code }) => ({
             id,
             name,
             description,
             type,
+            eunis2022code,
             color: generateColor(id),
           }));
 
