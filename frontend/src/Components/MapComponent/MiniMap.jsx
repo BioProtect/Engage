@@ -14,8 +14,9 @@ const MiniMap = ({
   mainMap,
   width = 220,
   height = 150,
-  zoomOutDelta = 7,
-  minZoom = 2,
+  zoomOutDelta = 10,
+  minZoom = 4,
+  maxMiniZoom = 7,
 }) => {
   const miniMapRef = useRef(null);
   const miniMapInstanceRef = useRef(null);
@@ -49,8 +50,12 @@ const MiniMap = ({
       layers: [baseLayer, vectorLayer],
       view: new View({
         center: mainMap.getView().getCenter(),
-        zoom: Math.max(mainMap.getView().getZoom() - zoomOutDelta, minZoom),
+        zoom: Math.min(
+          Math.max(mainMap.getView().getZoom() - zoomOutDelta, minZoom),
+          maxMiniZoom,
+        ),
         minZoom: minZoom,
+        maxZoom: maxMiniZoom,
       }),
       controls: [],
       interactions: [],
@@ -64,16 +69,16 @@ const MiniMap = ({
 
       miniMap.getView().setCenter(mainMap.getView().getCenter());
 
-      const newZoom = Math.max(
-        mainMap.getView().getZoom() - zoomOutDelta,
-        minZoom,
+      const newZoom = Math.min(
+        Math.max(mainMap.getView().getZoom() - zoomOutDelta, minZoom),
+        maxMiniZoom,
       );
       miniMap.getView().setZoom(newZoom);
     };
 
-    mainMap.getView().on("change:center", updateViewport);
-    mainMap.getView().on("change:resolution", updateViewport);
-    mainMap.getView().on("change:zoom", updateViewport);
+    const view = mainMap.getView();
+    view.on("change:center", updateViewport);
+    view.on("change:resolution", updateViewport);
 
     updateViewport();
 
@@ -82,8 +87,12 @@ const MiniMap = ({
       if (coord) mainMap.getView().setCenter(coord);
     });
 
-    return () => miniMap.setTarget(null);
-  }, [mainMap, zoomOutDelta, minZoom]);
+    return () => {
+      view.un("change:center", updateViewport);
+      view.un("change:resolution", updateViewport);
+      miniMap.setTarget(null);
+    };
+  }, [mainMap, zoomOutDelta, minZoom, maxMiniZoom]);
 
   return (
     <>

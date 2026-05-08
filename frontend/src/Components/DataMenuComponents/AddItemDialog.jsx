@@ -1,13 +1,9 @@
 import React, { useState } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  Select,
-  MenuItem,
   IconButton,
   Button,
   Box,
@@ -16,19 +12,55 @@ import {
   Grow,
   Tooltip,
   InputAdornment,
+  Alert,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import PhishingIcon from "@mui/icons-material/Phishing";
 import SetMealIcon from "@mui/icons-material/SetMeal";
 import ClearIcon from "@mui/icons-material/Clear";
+import CloseIcon from "@mui/icons-material/Close";
+import NotesIcon from "@mui/icons-material/Notes";
+import CategoryIcon from "@mui/icons-material/Category";
+import AbcIcon from "@mui/icons-material/Abc";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { save_drawing_item } from "../../Api/DataMenuApi";
 import { useColorContext } from "../../Contexts/ColorContext";
 
-const MAX_LENGTHS = {
-  Name: 10,
-  description: 200,
+const MAX_LENGTHS = { Name: 30, description: 200 };
+
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 2,
+    background: "rgba(255,255,255,0.25)",
+    backdropFilter: "blur(8px)",
+    fontSize: "0.875rem",
+    "& fieldset": { borderColor: "rgba(255,255,255,0.45)" },
+    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.7)" },
+    "&.Mui-focused fieldset": { borderColor: "rgba(25,118,210,0.5)" },
+  },
 };
+
+const FieldLabel = ({ icon, text }) => (
+  <Box
+    sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.6, ml: 0.5 }}
+  >
+    {React.cloneElement(icon, {
+      sx: { fontSize: 13, color: "rgba(0,0,0,0.4)" },
+    })}
+    <Typography
+      variant="caption"
+      sx={{
+        fontWeight: 600,
+        color: "rgba(0,0,0,0.45)",
+        letterSpacing: "0.5px",
+        textTransform: "uppercase",
+        fontSize: "0.65rem",
+      }}
+    >
+      {text}
+    </Typography>
+  </Box>
+);
 
 const AddNewItem = ({ onAdd }) => {
   const { isAuthenticated } = useAuth();
@@ -40,73 +72,46 @@ const AddNewItem = ({ onAdd }) => {
     description: "",
     Category: "",
   });
-
   const [errors, setErrors] = useState({
     Name: "",
     description: "",
     Category: "",
   });
-
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     if (value.length > (MAX_LENGTHS[name] ?? Infinity)) {
       setErrors((prev) => ({
         ...prev,
-        [name]: `Maximum length is ${MAX_LENGTHS[name]} characters.`,
+        [name]: `Maximum ${MAX_LENGTHS[name]} characters.`,
       }));
     } else if ((name === "Name" || name === "Category") && !value.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: `${name} cannot be empty.`,
-      }));
+      setErrors((prev) => ({ ...prev, [name]: `${name} cannot be empty.` }));
     } else {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
-
-    setNewItem((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setNewItem((prev) => ({ ...prev, [name]: value }));
   };
 
   const clearField = (field) => {
-    setNewItem((prev) => ({
-      ...prev,
-      [field]: "",
-    }));
-    setErrors((prev) => ({
-      ...prev,
-      [field]: "",
-    }));
+    setNewItem((prev) => ({ ...prev, [field]: "" }));
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleAddItem = async () => {
     const newErrors = {};
-
-    if (!newItem.Name.trim()) {
-      newErrors.Name = "Name cannot be empty.";
-    } else if (newItem.Name.length > MAX_LENGTHS.Name) {
-      newErrors.Name = `Maximum length is ${MAX_LENGTHS.Name} characters.`;
-    }
-
-    if (!newItem.Category.trim()) {
-      newErrors.Category = "Category must be selected.";
-    }
-
+    if (!newItem.Name.trim()) newErrors.Name = "Name cannot be empty.";
+    else if (newItem.Name.length > MAX_LENGTHS.Name)
+      newErrors.Name = `Maximum ${MAX_LENGTHS.Name} characters.`;
+    if (!newItem.Category.trim())
+      newErrors.Category = "Please select a category.";
     if (
       newItem.description.trim() &&
       newItem.description.length > MAX_LENGTHS.description
-    ) {
-      newErrors.description = `Maximum length is ${MAX_LENGTHS.description} characters.`;
-    }
-
+    )
+      newErrors.description = `Maximum ${MAX_LENGTHS.description} characters.`;
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -114,30 +119,19 @@ const AddNewItem = ({ onAdd }) => {
 
     setLoading(true);
     setApiError("");
-
     try {
       const savedFeature = await save_drawing_item({
         name: newItem.Name.trim(),
         description: newItem.description.trim(),
         type: newItem.Category,
       });
-
-      const featureWithColor = {
+      onAdd({
         ...savedFeature.feature,
         color: generateColor(savedFeature.feature.id),
-      };
-
-      onAdd(featureWithColor);
-
-      setShowModal(false);
-      setNewItem({
-        Name: "",
-        description: "",
-        Category: "",
       });
-      setErrors({ Name: "", description: "", Category: "" });
+      handleCancel();
     } catch (error) {
-      setApiError(error.message || "Failed to save feature");
+      setApiError(error.message || "Failed to save item");
     } finally {
       setLoading(false);
     }
@@ -145,11 +139,7 @@ const AddNewItem = ({ onAdd }) => {
 
   const handleCancel = () => {
     setShowModal(false);
-    setNewItem({
-      Name: "",
-      description: "",
-      Category: "",
-    });
+    setNewItem({ Name: "", description: "", Category: "" });
     setErrors({ Name: "", description: "", Category: "" });
     setApiError("");
   };
@@ -198,27 +188,18 @@ const AddNewItem = ({ onAdd }) => {
           >
             <AddCircleIcon fontSize="inherit" />
           </IconButton>
-
-          <Box
-            component="span"
+          <Typography
             sx={{
-              fontSize: 11,
-              fontWeight: 500,
-              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-              color: isAuthenticated ? "text.primary" : "grey.400",
-              mt: 1,
-              letterSpacing: 0.15,
-              userSelect: "none",
-              lineHeight: 1,
-              width: "100%",
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              mt: 0.5,
               textAlign: "center",
               whiteSpace: "nowrap",
-              display: "block",
-              height: 16,
+              color: isAuthenticated ? "text.primary" : "grey.400",
             }}
           >
             Add Item
-          </Box>
+          </Typography>
         </Box>
       </Tooltip>
 
@@ -230,227 +211,291 @@ const AddNewItem = ({ onAdd }) => {
         transitionDuration={300}
         BackdropProps={{
           sx: {
-            backgroundColor: "rgba(0, 0, 0, 0.15)",
-            backdropFilter: "none",
+            backgroundColor: "rgba(0,0,0,0.15)",
+            backdropFilter: "blur(4px)",
           },
         }}
         PaperProps={{
           sx: {
-            backgroundColor: "transparent",
-            boxShadow: "none",
+            m: 2,
+            borderRadius: 3,
+            background: "rgba(235, 242, 255, 0.55)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.6)",
+            boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
+            overflow: "hidden",
+            minWidth: { xs: "80vw", sm: 380 },
+            maxWidth: 420,
           },
         }}
       >
-        <Box
+        <IconButton
+          onClick={handleCancel}
+          size="small"
           sx={{
-            m: 2,
-            px: 5,
-            py: 4,
-            borderRadius: 4,
-            backdropFilter: "blur(20px)",
-            background: "rgba(255, 255, 255, 0.4)",
-            border: "1px solid rgba(255, 255, 255, 0.35)",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.06)",
-            color: "#111",
-            minWidth: 350,
+            position: "absolute",
+            top: 12,
+            right: 12,
+            color: "rgba(0,0,0,0.4)",
+            bgcolor: "rgba(0,0,0,0.05)",
+            "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
+            zIndex: 1,
           }}
         >
-          <DialogTitle
+          <CloseIcon fontSize="small" />
+        </IconButton>
+
+        <DialogContent sx={{ pt: 3.5, px: 3, pb: 2 }}>
+          <Box
             sx={{
-              textAlign: "center",
-              p: 0,
-              mb: 2,
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
-              gap: 1,
+              mb: 2.5,
             }}
-            component="div"
           >
-            <AddCircleIcon color="primary" fontSize="medium" />
-            <Typography
-              variant="h6"
-              color="primary"
-              component="h2"
-              sx={{ m: 0 }}
+            <Box
+              sx={{
+                mb: 1.5,
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(135deg, rgba(25,118,210,0.15), rgba(25,118,210,0.25))",
+                border: "1.5px solid rgba(25,118,210,0.25)",
+                boxShadow: "0 4px 12px rgba(25,118,210,0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
+              <AddCircleIcon sx={{ fontSize: 30, color: "#1976d2" }} />
+            </Box>
+            <Typography variant="h6" fontWeight={700} sx={{ color: "#1a1a2e" }}>
               Add New Item
             </Typography>
-          </DialogTitle>
+          </Box>
 
-          <Divider sx={{ mb: 3, borderColor: "rgba(0, 0, 0, 0.1)" }} />
-
-          <DialogContent sx={{ px: 0, pt: 0, pb: 2 }}>
-            <TextField
-              label="Name"
-              name="Name"
-              value={newItem.Name}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-              error={Boolean(errors.Name)}
-              helperText={
-                errors.Name
-                  ? errors.Name
-                  : `${newItem.Name.length}/${MAX_LENGTHS.Name}`
-              }
-              inputProps={{ maxLength: MAX_LENGTHS.Name }}
-              required
-              InputProps={{
-                endAdornment: newItem.Name ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => clearField("Name")}
-                      edge="end"
-                      size="small"
-                      aria-label="clear name"
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-            />
-            <TextField
-              label="Description"
-              name="description"
-              value={newItem.description}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-              multiline
-              minRows={3}
-              error={Boolean(errors.description)}
-              helperText={
-                errors.description
-                  ? errors.description
-                  : `${newItem.description.length}/${MAX_LENGTHS.description}`
-              }
-              InputProps={{
-                endAdornment: newItem.description ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => clearField("description")}
-                      edge="end"
-                      size="small"
-                      aria-label="clear description"
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-            />
-            <FormControl fullWidth>
-              <Select
-                value={newItem.Category}
-                onChange={handleInputChange}
-                name="Category"
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected) {
-                    return <em>Select category*</em>;
-                  }
-                  if (selected === "Features") {
-                    return (
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <SetMealIcon fontSize="small" />
-                        {selected}
-                      </Box>
-                    );
-                  }
-                  if (selected === "Activities") {
-                    return (
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <PhishingIcon fontSize="small" />
-                        {selected}
-                      </Box>
-                    );
-                  }
-                  return selected;
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
+            {apiError && (
+              <Alert
+                severity="error"
+                sx={{
+                  borderRadius: 2,
+                  py: 0.5,
+                  fontSize: "0.82rem",
+                  bgcolor: "rgba(244,67,54,0.08)",
+                  border: "1px solid rgba(244,67,54,0.2)",
+                  color: "error.main",
+                  "& .MuiAlert-icon": { color: "error.main" },
                 }}
               >
-                <MenuItem disabled value="">
-                  Select category
-                </MenuItem>
-                <MenuItem value="Features">
-                  <SetMealIcon fontSize="small" sx={{ mr: 1 }} />
-                  Features
-                </MenuItem>
-                <MenuItem value="Activities">
-                  <PhishingIcon fontSize="small" sx={{ mr: 1 }} />
-                  Activities
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            {apiError && (
-              <Typography
-                color="error"
-                variant="body2"
-                mt={1}
-                textAlign="center"
-              >
                 {apiError}
-              </Typography>
+              </Alert>
             )}
-          </DialogContent>
 
-          <Divider sx={{ mt: 1, mb: 2, borderColor: "rgba(0, 0, 0, 0.08)" }} />
+            <Box>
+              <FieldLabel icon={<AbcIcon />} text="Name" />
+              <TextField
+                name="Name"
+                value={newItem.Name}
+                onChange={handleInputChange}
+                fullWidth
+                size="small"
+                error={Boolean(errors.Name)}
+                inputProps={{ maxLength: MAX_LENGTHS.Name }}
+                InputProps={{
+                  endAdornment: newItem.Name ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => clearField("Name")}
+                        size="small"
+                        edge="end"
+                      >
+                        <ClearIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={inputSx}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: errors.Name ? "error.main" : "rgba(0,0,0,0.35)",
+                  mt: 0.4,
+                  ml: 0.5,
+                  display: "block",
+                }}
+              >
+                {errors.Name || `${newItem.Name.length}/${MAX_LENGTHS.Name}`}
+              </Typography>
+            </Box>
 
-          <DialogActions sx={{ justifyContent: "center", p: 0 }}>
-            <Button
-              onClick={handleCancel}
-              color="error"
-              variant="contained"
-              sx={{
-                borderRadius: 2,
-                boxShadow: "0 4px 14px rgba(211, 47, 47, 0.4)",
-                textTransform: "none",
-                fontWeight: 600,
-                px: 5,
-                py: 1.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-              disabled={loading}
-            >
-              <ClearIcon fontSize="small" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddItem}
-              color="primary"
-              variant="contained"
-              disabled={!isFormValid || !isAuthenticated || loading}
-              sx={{
-                borderRadius: 2,
-                boxShadow: "0 4px 14px rgba(25, 118, 210, 0.25)",
-                textTransform: "none",
-                fontWeight: 600,
-                px: 5,
-                py: 1.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              {loading ? (
-                "Adding..."
-              ) : (
-                <>
-                  <AddCircleIcon fontSize="small" />
-                  Add Item
-                </>
+            <Box>
+              <FieldLabel icon={<NotesIcon />} text="Description" />
+              <TextField
+                name="description"
+                value={newItem.description}
+                onChange={handleInputChange}
+                fullWidth
+                size="small"
+                multiline
+                minRows={2}
+                error={Boolean(errors.description)}
+                InputProps={{
+                  endAdornment: newItem.description ? (
+                    <InputAdornment
+                      position="end"
+                      sx={{ alignSelf: "flex-start", mt: 1 }}
+                    >
+                      <IconButton
+                        onClick={() => clearField("description")}
+                        size="small"
+                        edge="end"
+                      >
+                        <ClearIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={inputSx}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: errors.description ? "error.main" : "rgba(0,0,0,0.35)",
+                  mt: 0.4,
+                  ml: 0.5,
+                  display: "block",
+                }}
+              >
+                {errors.description ||
+                  `${newItem.description.length}/${MAX_LENGTHS.description}`}
+              </Typography>
+            </Box>
+
+            <Box>
+              <FieldLabel icon={<CategoryIcon />} text="Category" />
+              <Box
+                sx={{
+                  display: "flex",
+                  background: "rgba(255,255,255,0.25)",
+                  backdropFilter: "blur(8px)",
+                  border: errors.Category
+                    ? "1px solid rgba(244,67,54,0.5)"
+                    : "1px solid rgba(255,255,255,0.45)",
+                  borderRadius: "10px",
+                  p: "4px",
+                  gap: "4px",
+                }}
+              >
+                {[
+                  {
+                    value: "Features",
+                    icon: <SetMealIcon sx={{ fontSize: 16 }} />,
+                  },
+                  {
+                    value: "Activities",
+                    icon: <PhishingIcon sx={{ fontSize: 16 }} />,
+                  },
+                ].map(({ value, icon }) => (
+                  <Box
+                    key={value}
+                    onClick={() => {
+                      setNewItem((prev) => ({ ...prev, Category: value }));
+                      setErrors((prev) => ({ ...prev, Category: "" }));
+                    }}
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 0.75,
+                      py: 0.85,
+                      borderRadius: "7px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: "0.82rem",
+                      transition: "all 0.2s ease",
+                      userSelect: "none",
+                      ...(newItem.Category === value
+                        ? {
+                            background: "rgba(25,118,210,0.85)",
+                            color: "#fff",
+                            boxShadow: "0 2px 8px rgba(25,118,210,0.35)",
+                          }
+                        : { color: "rgba(0,0,0,0.5)" }),
+                    }}
+                  >
+                    {icon}
+                    {value}
+                  </Box>
+                ))}
+              </Box>
+              {errors.Category && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "error.main",
+                    mt: 0.4,
+                    ml: 0.5,
+                    display: "block",
+                  }}
+                >
+                  {errors.Category}
+                </Typography>
               )}
-            </Button>
-          </DialogActions>
-        </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <Divider sx={{ borderColor: "rgba(255,255,255,0.5)", mx: 2 }} />
+
+        <DialogActions
+          sx={{ justifyContent: "center", px: 3, py: 2, gap: 1.5 }}
+        >
+          <Button
+            onClick={handleCancel}
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            disabled={loading}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              borderColor: "rgba(0,0,0,0.2)",
+              color: "text.secondary",
+              bgcolor: "rgba(255,255,255,0.4)",
+              "&:hover": {
+                bgcolor: "rgba(255,255,255,0.6)",
+                borderColor: "rgba(0,0,0,0.3)",
+              },
+              px: 2.5,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAddItem}
+            variant="contained"
+            startIcon={<AddCircleIcon />}
+            disabled={!isFormValid || !isAuthenticated || loading}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: "0 4px 12px rgba(25,118,210,0.35)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #1565c0, #1976d2)",
+                boxShadow: "0 4px 16px rgba(25,118,210,0.5)",
+              },
+              "&:disabled": { background: "rgba(0,0,0,0.12)" },
+              px: 2.5,
+            }}
+          >
+            {loading ? "Adding..." : "Add Item"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

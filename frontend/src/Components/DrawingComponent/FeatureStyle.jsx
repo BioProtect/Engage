@@ -2,6 +2,8 @@ import { Fill, Stroke, Style, Text } from "ol/style";
 
 import { getArea } from "ol/sphere";
 
+const numberFormat = new Intl.NumberFormat();
+const CACHE_MAX = 500;
 const styleCache = {};
 
 // export const formatArea = (polygon) => {
@@ -19,8 +21,8 @@ export const formatArea = (polygon) => {
   const nf = new Intl.NumberFormat();
 
   return area > 1e6
-    ? `${nf.format((area / 1e6).toFixed(2))} km²`
-    : `${nf.format(area.toFixed(0))} m²`;
+    ? `${numberFormat.format((area / 1e6).toFixed(2))} km²`
+    : `${numberFormat.format(area.toFixed(0))} m²`;
 };
 
 export const createFeatureStyle = (
@@ -36,9 +38,7 @@ export const createFeatureStyle = (
   if (!geometry) return null;
 
   const zoom = map?.getView ? map.getView().getZoom() : 10;
-  const cacheKey = `${
-    feature.getId() || name
-  }-${zoom}-${showLabels}-${selected}-${number}-${areaLabel}`;
+  const cacheKey = `${feature.ol_uid}-${zoom}-${showLabels}-${selected}-${number}-${areaLabel}`;
   if (styleCache[cacheKey]) return styleCache[cacheKey];
 
   const fillColor = selected ? `${color}aa` : `${color}33`;
@@ -48,10 +48,6 @@ export const createFeatureStyle = (
   const centerGeom = geometry.getInteriorPoint?.() || geometry;
 
   const baseFont = Math.max(11, zoom);
-  const numberFontSize = baseFont;
-  const nameFontSize = baseFont + 1;
-  const areaFontSize = baseFont;
-
   const spacing = 14;
 
   const styles = [
@@ -65,17 +61,17 @@ export const createFeatureStyle = (
     const labels = [
       {
         text: number ? `#${number}` : null,
-        font: `500 ${numberFontSize}px "Inter", sans-serif`,
+        font: `500 ${baseFont}px "Inter", sans-serif`,
         offset: 0,
       },
       {
         text: name || null,
-        font: `600 ${nameFontSize}px "Inter", sans-serif`,
+        font: `600 ${baseFont + 1}px "Inter", sans-serif`,
         offset: number ? -spacing : 0,
       },
       {
         text: areaLabel || null,
-        font: `400 ${areaFontSize}px "Inter", sans-serif`,
+        font: `400 ${baseFont}px "Inter", sans-serif`,
         offset: spacing,
       },
     ];
@@ -100,6 +96,11 @@ export const createFeatureStyle = (
         );
       }
     });
+  }
+
+  if (Object.keys(styleCache).length >= CACHE_MAX) {
+    const keys = Object.keys(styleCache);
+    for (let i = 0; i < keys.length / 2; i++) delete styleCache[keys[i]];
   }
 
   styleCache[cacheKey] = styles;

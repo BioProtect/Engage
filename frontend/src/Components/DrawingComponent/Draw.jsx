@@ -42,7 +42,13 @@ const DrawingLayer = () => {
     nameRef.current = activeName;
     eunisCombdRef.current = activeEunisCode;
     featureTypeRef.current = activeFeatureType;
-  }, [activeColor, activeDrawingRow, activeName, activeEunisCode, activeFeatureType]);
+  }, [
+    activeColor,
+    activeDrawingRow,
+    activeName,
+    activeEunisCode,
+    activeFeatureType,
+  ]);
 
   const [density, setDensity] = useState(1);
   const [description, setDescription] = useState("");
@@ -53,52 +59,74 @@ const DrawingLayer = () => {
     setDescription(selectedFeature.get("description") ?? "");
   }, [selectedFeature]);
 
-  const handleDelete = useCallback(() => {
-    if (!selectedFeature) return;
+  const handleDelete = useCallback(
+    (featureToDelete = selectedFeature) => {
+      if (!featureToDelete || !vectorSource) return;
 
-    const rowId = selectedFeature.get("id");
-    vectorSource.removeFeature(selectedFeature);
+      const rowId = featureToDelete.get("id");
+      const drawingNumber = featureToDelete.get("drawingNumber");
+      const timestamp = featureToDelete.get("timestamp");
 
-    setDrawnFeatures((prev) => {
-      const updated = prev.filter((f) => f !== selectedFeature);
+      const matchesFeatureToDelete = (feature) =>
+        feature === featureToDelete ||
+        (feature.get("id") === rowId &&
+          feature.get("drawingNumber") === drawingNumber &&
+          feature.get("timestamp") === timestamp);
 
-      const featuresForRow = updated
-        .filter((f) => f.get("id") === rowId)
-        .sort(
-          (a, b) => new Date(a.get("timestamp")) - new Date(b.get("timestamp")),
+      selectRef.current?.getFeatures().clear();
+      setSelectedFeature(null);
+
+      vectorSource
+        .getFeatures()
+        .filter(matchesFeatureToDelete)
+        .forEach((feature) => vectorSource.removeFeature(feature));
+      vectorSource.changed();
+
+      setDrawnFeatures((prev) => {
+        const updated = prev.filter(
+          (feature) => !matchesFeatureToDelete(feature),
         );
 
-      featuresForRow.forEach((f, index) => f.set("drawingNumber", index + 1));
-      featuresForRow.forEach((f) =>
-        f.setStyle(
-          createFeatureStyle(f, {
-            map,
-            showLabels: true,
-            selected: f === selectedFeature,
-          }),
-        ),
-      );
+        const featuresForRow = updated
+          .filter((f) => f.get("id") === rowId)
+          .sort(
+            (a, b) =>
+              new Date(a.get("timestamp")) - new Date(b.get("timestamp")),
+          );
 
-      return updated;
-    });
+        featuresForRow.forEach((f, index) => f.set("drawingNumber", index + 1));
+        featuresForRow.forEach((f) =>
+          f.setStyle(
+            createFeatureStyle(f, {
+              map,
+              showLabels: true,
+              selected: f === selectedFeature,
+            }),
+          ),
+        );
 
-    setSelectedFeature(null);
-    selectRef.current?.getFeatures().clear();
-    showSnackbar("Successfully deleted drawing!");
-  }, [
-    selectedFeature,
-    vectorSource,
-    setDrawnFeatures,
-    setSelectedFeature,
-    selectRef,
-    showSnackbar,
-    map,
-  ]);
+        return updated;
+      });
+
+      const name = featureToDelete.get("name") || "Unknown";
+      showSnackbar(`Successfully deleted Drawing ${drawingNumber} of ${name}!`);
+    },
+    [
+      selectedFeature,
+      vectorSource,
+      setDrawnFeatures,
+      setSelectedFeature,
+      selectRef,
+      showSnackbar,
+      map,
+    ],
+  );
 
   const {
     drawRef,
     tooltipCoord,
     tooltipText,
+    isDrawing,
     showPinchWarning,
     setShowPinchWarning,
   } = useDrawingInteraction({
@@ -114,6 +142,7 @@ const DrawingLayer = () => {
     selectRef,
     setSelectedFeature,
     createFeatureStyle,
+    showSnackbar,
   });
 
   useSelectionInteraction({
@@ -192,7 +221,7 @@ const DrawingLayer = () => {
 
   return (
     <>
-      {tooltipCoord && activeDrawingRow && drawRef.current?.getActive() && (
+      {isDrawing && tooltipCoord && activeDrawingRow && (
         <DistanceTooltip
           map={map}
           coordinate={tooltipCoord}

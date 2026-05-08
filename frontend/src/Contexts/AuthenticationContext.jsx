@@ -2,6 +2,7 @@ import * as api from "../Api/AuthenticationApi";
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -25,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
   const logoutTimeoutRef = useRef(null);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     setProject(null);
@@ -37,9 +38,9 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(logoutTimeoutRef.current);
       logoutTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     const res = await api.login(username, password);
     console.log("res ", res);
     if (res.accessToken) {
@@ -50,16 +51,16 @@ export const AuthProvider = ({ children }) => {
     } else {
       throw new Error(res.msg || "Login failed");
     }
-  };
+  }, []);
 
-  const signup = async (username, password) => {
+  const signup = useCallback(async (username, password) => {
     const res = await api.signup(username, password);
     if (res.msg === "Signup successful") {
       return;
     } else {
       throw new Error(res.msg || "Signup failed");
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (token && user) {
@@ -87,7 +88,7 @@ export const AuthProvider = ({ children }) => {
         logoutTimeoutRef.current = null;
       }
     }
-  }, [token, user]);
+  }, [token, user, logout]);
 
   useEffect(() => {
     if (token) {

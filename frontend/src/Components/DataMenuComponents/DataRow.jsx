@@ -1,28 +1,26 @@
 import React, { useState } from "react";
-import EditIcon from "@mui/icons-material/Edit";
-import StopIcon from "@mui/icons-material/Stop";
-import {
-  Checkbox,
-  Paper,
-  Box,
-  Typography,
-  IconButton,
-  Menu,
-  MenuItem,
-  Divider,
-  Tooltip,
-} from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ClearIcon from "@mui/icons-material/Clear";
-import InfoIcon from "@mui/icons-material/Info";
 
-import { useMapContext } from "../../Contexts/MapContext";
-import { useAuth } from "../../Contexts/AuthenticationContext";
-import DescriptionDialog from "../DataMenuComponents/DescriptionDialog";
-import DrawingDropdown from "../DrawingComponent/DrawingListDialog";
-import { delete_drawing_item } from "../../Api/DataMenuApi";
+import Box from "@mui/material/Box";
+import Checkbox from "@mui/icons-material/CheckBox";
+import ClearIcon from "@mui/icons-material/Clear";
 import ConfirmDialog from "./ConfirmDialog";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DescriptionDialog from "../DataMenuComponents/DescriptionDialog";
+import Divider from "@mui/material/Divider";
+import DrawingDropdown from "../DrawingComponent/DrawingListDialog";
+import EditIcon from "@mui/icons-material/Edit";
+import IconButton from "@mui/material/IconButton";
+import InfoIcon from "@mui/icons-material/Info";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import Paper from "@mui/material/Paper";
+import StopIcon from "@mui/icons-material/Stop";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import { delete_drawing_item } from "../../Api/DataMenuApi";
+import { useAuth } from "../../Contexts/AuthenticationContext";
+import { useMapContext } from "../../Contexts/MapContext";
 
 const DataRow = ({
   row,
@@ -66,10 +64,9 @@ const DataRow = ({
 
   const { isAuthenticated } = useAuth();
 
-  const getRowDrawings = (id) =>
-    drawnFeatures?.filter((f) => f.get("id") === id) || [];
-
-  const drawingCount = getRowDrawings(row.id).length;
+  const rowDrawings =
+    drawnFeatures?.filter((f) => f.get("id") === row.id) || [];
+  const drawingCount = rowDrawings.length;
   const canToggleCheckbox = drawingCount > 0;
 
   const clearRowDrawings = (rowId) => {
@@ -79,7 +76,7 @@ const DataRow = ({
     if (activeDrawingRow !== rowId) handleCheckboxChange(rowId, false);
     setSelectedFeature(null);
     setDrawnFeatures((prev) =>
-      prev.filter((feature) => feature.get("id") !== rowId)
+      prev.filter((feature) => feature.get("id") !== rowId),
     );
     showSnackbar(`Drawings for "${row.name}" have been cleared!`);
   };
@@ -97,7 +94,7 @@ const DataRow = ({
       showSnackbar(`${row.name} was successfully deleted!`);
     } catch (err) {
       console.error("Failed to delete item:", err);
-      alert("Failed to delete item: " + err.message);
+      showSnackbar(`Failed to delete item: ${err.message}`, "error");
     }
     handleSettingsMenuClose();
   };
@@ -147,32 +144,75 @@ const DataRow = ({
           border:
             row.id === activeDrawingRow
               ? "2px solid #64b5f6"
-              : "1px solid #ddd",
+              : "1px solid rgba(200, 215, 240, 0.7)",
           backgroundColor:
-            row.id === activeDrawingRow ? "#80d6ff" : "transparent",
+            row.id === activeDrawingRow
+              ? "#80d6ff"
+              : "rgba(255, 255, 255, 0.4)",
           boxShadow:
             row.id === activeDrawingRow
               ? "0 0 15px rgba(66, 165, 245, 0.9)"
-              : "0 2px 6px rgba(0,0,0,0.1)",
+              : "0 1px 4px rgba(100, 130, 180, 0.1)",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {/* Settings menu */}
-          <IconButton
-            aria-label="more"
-            aria-controls={`menu-${row.id}`}
-            aria-haspopup="true"
-            onClick={handleSettingsMenuClick}
-            size="small"
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.25,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {/* Settings + Checkbox grouped tightly */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0,
+              flexShrink: 0,
+            }}
           >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
+            <IconButton
+              aria-label="more"
+              aria-controls={`menu-${row.id}`}
+              aria-haspopup="true"
+              onClick={handleSettingsMenuClick}
+              size="small"
+              sx={{ p: "2px" }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+
+            <Checkbox
+              checked={visibilityMap[row.id] === true}
+              onChange={() => handleCheckboxSelection(row.id)}
+              size="small"
+              disabled={row.id === activeDrawingRow || !canToggleCheckbox}
+              sx={{ p: "2px" }}
+            />
+          </Box>
 
           <Menu
             id={`menu-${row.id}`}
             anchorEl={settingsMenu}
             open={openSettings}
             onClose={handleSettingsMenuClose}
+            PaperProps={{
+              sx: {
+                background: "rgba(235, 242, 255, 0.55)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.6)",
+                borderRadius: 2,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                minWidth: 180,
+                p: 0.5,
+                "& .MuiMenuItem-root": {
+                  borderRadius: 1.5,
+                  fontSize: "0.875rem",
+                },
+              },
+            }}
           >
             <MenuItem
               onClick={() => {
@@ -184,15 +224,19 @@ const DataRow = ({
                 setConfirmOpen(true);
               }}
               disabled={drawingCount === 0}
-              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                color: "#1976d2",
+                "&:hover": { bgcolor: "rgba(25,118,210,0.1)" },
+              }}
             >
-              <IconButton aria-label="clear" sx={{ color: "blue" }}>
-                <ClearIcon />
-              </IconButton>
+              <ClearIcon fontSize="small" sx={{ color: "#1976d2" }} />
               Clear All Drawings
             </MenuItem>
 
-            <Divider />
+            <Divider sx={{ my: 0.5, borderColor: "rgba(0,0,0,0.08)" }} />
 
             <Tooltip title={isAuthenticated ? "" : "Login required to delete"}>
               <span>
@@ -210,81 +254,79 @@ const DataRow = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 1,
-                    color: "red",
-                    cursor: isAuthenticated ? "pointer" : "default",
+                    color: "error.main",
+                    "&:hover": { bgcolor: "rgba(244,67,54,0.08)" },
                   }}
                 >
-                  <IconButton
-                    aria-label="delete"
-                    sx={{ color: "red" }}
-                    disabled={!isAuthenticated}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
                   {isAuthenticated ? "Delete" : "Login to Delete"}
                 </MenuItem>
               </span>
             </Tooltip>
           </Menu>
 
-          {/* Visibility checkbox */}
-          <Checkbox
-            checked={visibilityMap[row.id] === true}
-            onChange={() => handleCheckboxSelection(row.id)}
-            size="small"
-            disabled={row.id === activeDrawingRow || !canToggleCheckbox}
-          />
+          <Tooltip title="Show info">
+            <IconButton
+              size="small"
+              onClick={() => setInfoOpen(true)}
+              aria-label="info"
+              sx={{ padding: "3px", color: "#1976d2", flexShrink: 0, ml: 2 }}
+            >
+              <InfoIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
 
-          {/* Row title with info */}
           <Typography
             variant="body2"
             fontWeight={600}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
               fontSize: "0.875rem",
               color: "#333",
+              flex: 1,
+              minWidth: 0,
             }}
           >
-            <Tooltip title="Show info">
-              <IconButton
-                size="small"
-                onClick={() => setInfoOpen(true)}
-                aria-label="info"
-                sx={{ padding: "3px", color: "#1976d2", marginRight: "4px" }}
-              >
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
             {row.name}
           </Typography>
         </Box>
 
         {/* Actions */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box
-            onClick={handleColorClick}
-            sx={{
-              cursor: drawingCount > 0 ? "pointer" : "default",
-              width: 28,
-              height: 28,
-              backgroundColor: row.color,
-              border: "1px solid #999",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: "0.75rem",
-              fontWeight: "bold",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-            }}
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}
+        >
+          <Tooltip
+            title={drawingCount > 0 ? "View drawings" : "No drawings yet"}
+            arrow
           >
-            {drawingCount}
-          </Box>
+            <Box
+              onClick={handleColorClick}
+              sx={{
+                cursor: drawingCount > 0 ? "pointer" : "default",
+                width: 30,
+                height: 30,
+                backgroundColor: row.color,
+                border: "2px solid rgba(255,255,255,0.7)",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                boxShadow: `0 2px 8px rgba(0,0,0,0.2), 0 0 0 2px ${row.color}44`,
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                ...(drawingCount > 0 && {
+                  "&:hover": {
+                    transform: "scale(1.18)",
+                    boxShadow: `0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px ${row.color}66`,
+                  },
+                }),
+              }}
+            >
+              {drawingCount}
+            </Box>
+          </Tooltip>
 
-          {/* Start/Stop Drawing button */}
           <Tooltip
             title={
               activeDrawingRow === row.id ? "Stop Drawing" : "Start Drawing"
@@ -316,7 +358,6 @@ const DataRow = ({
         </Box>
       </Paper>
 
-      {/* Info dialog */}
       <DescriptionDialog
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
@@ -324,7 +365,6 @@ const DataRow = ({
         description={row.description}
       />
 
-      {/* Drawing dropdown */}
       <DrawingDropdown
         anchorEl={dropdownAnchor}
         open={openDrawings}
@@ -332,11 +372,10 @@ const DataRow = ({
           setOpenDropdownRowId(null);
           setUserOpenedDropdown(false);
         }}
-        drawings={getRowDrawings(row.id)}
+        drawings={rowDrawings}
         row={row}
       />
 
-      {/* Dynamic confirm dialog */}
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}

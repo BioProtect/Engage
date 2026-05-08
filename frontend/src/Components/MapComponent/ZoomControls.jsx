@@ -1,32 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const MIN_ZOOM = 3;
 const MAX_ZOOM = 24;
 
 const ZoomControls = ({ map, size = 48 }) => {
-  const [, forceUpdate] = useState(0);
+  const [zoom, setZoom] = useState(null);
 
-  if (!map) return null;
+  useEffect(() => {
+    if (!map) return;
+    const view = map.getView();
+    setZoom(view.getZoom());
+    const handler = () => setZoom(view.getZoom());
+    view.on("change:resolution", handler);
+    return () => view.un("change:resolution", handler);
+  }, [map]);
 
-  const view = map.getView();
-  const zoom = view.getZoom();
+  if (!map || zoom === null) return null;
 
   const EPS = 0.001;
   const zoomInDisabled = zoom >= MAX_ZOOM - EPS;
   const zoomOutDisabled = zoom <= MIN_ZOOM + EPS;
 
-  view.once("change:resolution", () => forceUpdate((n) => n + 1));
-
   const zoomIn = () => {
-    if (!zoomInDisabled) {
-      view.setZoom(zoom + 1);
-    }
+    if (!zoomInDisabled) map.getView().setZoom(zoom + 1);
   };
 
   const zoomOut = () => {
-    if (!zoomOutDisabled) {
-      view.setZoom(zoom - 1);
-    }
+    if (!zoomOutDisabled) map.getView().setZoom(zoom - 1);
   };
 
   const baseStyle = {
@@ -60,10 +60,7 @@ const ZoomControls = ({ map, size = 48 }) => {
       <button
         onClick={zoomIn}
         disabled={zoomInDisabled}
-        style={{
-          ...baseStyle,
-          ...(zoomInDisabled ? disabledStyle : enabledStyle),
-        }}
+        style={{ ...baseStyle, ...(zoomInDisabled ? disabledStyle : enabledStyle) }}
       >
         +
       </button>
@@ -71,10 +68,7 @@ const ZoomControls = ({ map, size = 48 }) => {
       <button
         onClick={zoomOut}
         disabled={zoomOutDisabled}
-        style={{
-          ...baseStyle,
-          ...(zoomOutDisabled ? disabledStyle : enabledStyle),
-        }}
+        style={{ ...baseStyle, ...(zoomOutDisabled ? disabledStyle : enabledStyle) }}
       >
         −
       </button>

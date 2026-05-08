@@ -4,15 +4,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 
 const SearchField = ({ searchQuery, onSearchChange }) => {
-  const handleClear = () => {
-    onSearchChange({ target: { value: "" } });
-  };
-
   return (
     <TextField
       fullWidth
       value={searchQuery}
-      onChange={onSearchChange}
+      onChange={(e) => onSearchChange(e.target.value)}
       variant="outlined"
       size="small"
       sx={{
@@ -36,7 +32,7 @@ const SearchField = ({ searchQuery, onSearchChange }) => {
         ),
         endAdornment: searchQuery && (
           <InputAdornment position="end">
-            <IconButton onClick={handleClear}>
+            <IconButton onClick={() => onSearchChange("")}>
               <ClearIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </InputAdornment>

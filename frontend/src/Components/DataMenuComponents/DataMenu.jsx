@@ -1,27 +1,25 @@
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Divider,
-  IconButton,
-  Switch,
-  Tooltip,
-  Typography,
-} from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AddItemDialog from "./AddItemDialog";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CategoryTabs from "./CategoryTabs";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CircularProgress from "@mui/material/CircularProgress";
 import ConfirmDialog from "./ConfirmDialog";
 import DataRow from "./DataRow";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import Divider from "@mui/material/Divider";
 import FinishSessionButton from "./FinishButton";
+import IconButton from "@mui/material/IconButton";
 import SearchField from "./Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SortSelect from "./SortSelect";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
 import { useColorContext } from "../../Contexts/ColorContext";
@@ -156,16 +154,12 @@ const DataMenu = () => {
     setAllSelected((prev) => !prev);
   };
 
-  const handleAddItem = async (item) => {
-    try {
-      setData((prevData) => {
-        const category = item.type === "Features" ? "Features" : "Activities";
-        return { ...prevData, [category]: [...prevData[category], item] };
-      });
-      showSnackbar(`${item.name} was successfully added!`);
-    } catch (error) {
-      console.error("Failed to add item:", error);
-    }
+  const handleAddItem = (item) => {
+    setData((prevData) => {
+      const category = item.type === "Features" ? "Features" : "Activities";
+      return { ...prevData, [category]: [...prevData[category], item] };
+    });
+    showSnackbar(`${item.name} was successfully added!`);
   };
 
   const handleFinishSession = () => {
@@ -177,6 +171,15 @@ const DataMenu = () => {
   };
 
   const filteredData = useMemo(() => {
+    let drawingCounts = null;
+    if (sortOption === "Drawings") {
+      drawingCounts = {};
+      drawnFeatures.forEach((f) => {
+        const id = f.get("id");
+        drawingCounts[id] = (drawingCounts[id] || 0) + 1;
+      });
+    }
+
     return data[selectedCategory]
       .filter((row) =>
         row.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -196,10 +199,7 @@ const DataMenu = () => {
               (visibilityMap[a.id] ?? false) - (visibilityMap[b.id] ?? false)
             );
           case "Drawings":
-            return (
-              drawnFeatures.filter((f) => f.get("id") === b.id).length -
-              drawnFeatures.filter((f) => f.get("id") === a.id).length
-            );
+            return (drawingCounts[b.id] || 0) - (drawingCounts[a.id] || 0);
           case "Recent":
             if (a.id === lastSelectedId) return -1;
             if (b.id === lastSelectedId) return 1;
@@ -228,7 +228,9 @@ const DataMenu = () => {
         top: isOpen ? `calc(20px + env(safe-area-inset-top))` : "20px",
         left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-        bgcolor: isOpen ? "background.paper" : "transparent",
+        bgcolor: isOpen ? "rgba(255, 255, 255, 0.5)" : "transparent",
+        backdropFilter: isOpen ? "blur(8px)" : "none",
+        border: isOpen ? "1px solid rgba(255, 255, 255, 0.35)" : "none",
         p: 1.5,
         borderRadius: 2,
         boxShadow: 3,
@@ -241,7 +243,6 @@ const DataMenu = () => {
         transition: "max-height 0.4s ease, bgcolor 0.3s ease",
       }}
     >
-      {/* Toggle Menu Button */}
       <Button
         onClick={toggleOpen}
         variant="contained"
@@ -263,10 +264,8 @@ const DataMenu = () => {
         {isOpen ? "Hide Menu" : "Show Menu"}
       </Button>
 
-      {/* Menu Content */}
       {isOpen && (
         <>
-          {/* Tabs and Sorting */}
           <Box
             sx={{
               display: "flex",
@@ -286,16 +285,46 @@ const DataMenu = () => {
             />
           </Box>
 
-          {/* Search Field */}
           <SearchField
             searchQuery={searchQuery}
-            onSearchChange={(e) => setSearchQuery(e.target.value)}
+            onSearchChange={setSearchQuery}
           />
 
           {/* Scrollable Data Rows */}
+          {stickyRow && (
+            <Box sx={{ mb: 2 }}>
+              <DataRow
+                row={stickyRow}
+                deleteRow={deleteRow}
+                openDropdownRowId={openDropdownRowId}
+                setOpenDropdownRowId={setOpenDropdownRowId}
+                dropdownAnchor={dropdownAnchor}
+                setDropdownAnchor={setDropdownAnchor}
+                userOpenedDropdown={userOpenedDropdown}
+                setUserOpenedDropdown={setUserOpenedDropdown}
+              />
+            </Box>
+          )}
+
           <Box
             ref={scrollContainerRef}
-            sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}
+            sx={{
+              flexGrow: 1,
+              overflowY: "auto",
+              pr: 1,
+              "&::-webkit-scrollbar": { width: 5 },
+              "&::-webkit-scrollbar-track": {
+                borderRadius: 10,
+                bgcolor: "rgba(255,255,255,0.1)",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                borderRadius: 10,
+                bgcolor: "rgba(25, 118, 210, 0.3)",
+              },
+              "&::-webkit-scrollbar-thumb:hover": {
+                bgcolor: "rgba(25, 118, 210, 0.55)",
+              },
+            }}
           >
             {isLoading ? (
               <Box
@@ -362,18 +391,16 @@ const DataMenu = () => {
 
           <Divider />
 
-          {/* Bottom Action Grid */}
           <Box
             sx={{
               mt: 3,
               display: "grid",
               gridTemplateColumns: "repeat(4, 1fr)",
               gap: 2,
-              bgcolor: "background.paper",
+              bgcolor: "rgba(255, 255, 255, 0.4)",
               p: 2,
               borderRadius: 3,
-              border: "1px solid",
-              borderColor: "divider",
+              border: "1px solid rgba(200, 215, 240, 0.7)",
               userSelect: "none",
             }}
           >
@@ -422,7 +449,6 @@ const DataMenu = () => {
               </Box>
             </Tooltip>
 
-            {/* Add Item */}
             <Box
               sx={{
                 display: "flex",
@@ -434,7 +460,6 @@ const DataMenu = () => {
               <AddItemDialog onAdd={handleAddItem} />
             </Box>
 
-            {/* Clear All */}
             <Tooltip title="Clear All Drawings">
               <Box
                 onClick={() => {
@@ -480,7 +505,6 @@ const DataMenu = () => {
               </Box>
             </Tooltip>
 
-            {/* Show Labels */}
             <Box
               sx={{
                 display: "flex",
@@ -508,11 +532,9 @@ const DataMenu = () => {
             </Box>
           </Box>
 
-          {/* Finish Session & User Info */}
           <FinishSessionButton onFinish={handleFinishSession} />
           <UserInfo />
 
-          {/* Confirm Dialog */}
           <ConfirmDialog
             open={confirmOpen}
             onClose={() => setConfirmOpen(false)}

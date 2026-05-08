@@ -11,7 +11,7 @@ const tooltipStyle = {
   fontSize: 12,
   fontWeight: 500,
   pointerEvents: "none",
-  transform: "translate(-50%, -100%)",
+  transform: "translateY(-100%)",
   opacity: 0.95,
   boxShadow: "0 2px 6px rgba(0, 0, 0, 0.3)",
   lineHeight: 1.2,
@@ -32,8 +32,8 @@ export const DistanceTooltip = ({ map, coordinate, text }) => {
 
     const overlay = new Overlay({
       element: container,
-      offset: [0, -15],
-      positioning: "bottom-center",
+      offset: [20, -10],
+      positioning: "bottom-left",
       stopEvent: false,
     });
 
@@ -46,7 +46,10 @@ export const DistanceTooltip = ({ map, coordinate, text }) => {
         map.removeOverlay(overlayRef.current);
         overlayRef.current = null;
       }
-      rootRef.current = null;
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
     };
   }, [map]);
 
