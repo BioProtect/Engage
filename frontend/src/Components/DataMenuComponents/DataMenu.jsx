@@ -2,6 +2,7 @@ import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AddItemDialog from "./AddItemDialog";
+import BioProtectLogo from "../../images/bioprotect_nobgrnd.png";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CategoryTabs from "./CategoryTabs";
@@ -14,6 +15,7 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import Divider from "@mui/material/Divider";
 import FinishSessionButton from "./FinishButton";
 import IconButton from "@mui/material/IconButton";
+import MenuIcon from "@mui/icons-material/Menu";
 import SearchField from "./Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SortSelect from "./SortSelect";
@@ -243,26 +245,50 @@ const DataMenu = () => {
         transition: "max-height 0.4s ease, bgcolor 0.3s ease",
       }}
     >
-      <Button
-        onClick={toggleOpen}
-        variant="contained"
-        color="primary"
+      <Box
         sx={{
-          mb: 2,
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
-          gap: 1,
-          borderRadius: "24px",
-          px: 3,
-          py: 1.25,
-          fontWeight: 600,
-          textTransform: "none",
-          boxShadow: "0 4px 8px rgba(0, 86, 179, 0.3)",
+          justifyContent: "space-between",
+          gap: 2,
+          mb: 1.5,
         }}
       >
-        {isOpen ? <ExpandLess /> : <ExpandMore />}
-        {isOpen ? "Hide Menu" : "Show Menu"}
-      </Button>
+        <img
+          width="58px"
+          src={BioProtectLogo}
+          alt="bioprotect logo"
+          loading="lazy"
+        />
+        <Typography
+          sx={{
+            color: "primary.main",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          BioProtect Engage
+        </Typography>
+        <Button
+          onClick={toggleOpen}
+          variant="contained"
+          color="primary"
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+            px: 3,
+            py: 1.25,
+            boxShadow: "0 4px 8px rgba(0, 86, 179, 0.3)",
+          }}
+        >
+          <MenuIcon />
+          Menu
+          {isOpen ? <ExpandLess /> : <ExpandMore />}
+        </Button>
+      </Box>
 
       {isOpen && (
         <>
