@@ -55,6 +55,50 @@ export async function get_feature_layers() {
   return data.features;
 }
 
+export async function get_activity_layers() {
+  const response = await fetch(
+    `${API_BASE_URL}/engage?action=list-activities`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch activity layers");
+  }
+  const data = await response.json();
+  return data.activities || [];
+}
+
+/**
+ * List prioritizr runs for a given project. Backed by the existing
+ * prioritizr_handler.list_runs — kept in its own namespace because runs are
+ * not collected via this app, only displayed for visualization.
+ */
+export async function get_prioritizr_runs(projectId) {
+  if (projectId == null) return [];
+  const response = await fetch(
+    `${API_BASE_URL}/prioritizr?action=list-runs&project-id=${projectId}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch prioritizr runs");
+  }
+  const data = await response.json();
+  return data.data || [];
+}
+
+/**
+ * Fetch the (h3_index, solution) pairs for a single run, so the caller can
+ * highlight selected hexes on top of the project planning-unit layer.
+ */
+export async function get_prioritizr_run_results(runId) {
+  if (runId == null) return [];
+  const response = await fetch(
+    `${API_BASE_URL}/prioritizr?action=get-results&run-id=${runId}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch run results");
+  }
+  const data = await response.json();
+  return data.data || [];
+}
+
 export async function save_polygon({
   user,
   userGroup,
@@ -106,8 +150,6 @@ export async function save_activity({
   geometry,
   token,
 }) {
-  name = name + " - " + userGroup;
-
   const response = await fetch(
     `${API_BASE_URL}/engage?action=create-activity`,
     {

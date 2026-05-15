@@ -70,6 +70,24 @@ export const createPlanningUnitLayer = (tilesetid, alias) => {
   };
 };
 
+/**
+ * Activities are stored as standalone PostGIS tables named by `activity_name`,
+ * which Martin auto-discovers and serves as MVT. We treat them like planning
+ * units / features — same Martin URL shape, no tileset namespace prefix.
+ */
+export const createActivityLayer = (activityName, alias) => {
+  return {
+    name: alias,
+    layer: new VectorTileLayer({
+      source: new VectorTileSource({
+        format: new MVT(),
+        url: `${MARTIN_BASE_URL}/${activityName}/{z}/{x}/{y}`,
+      }),
+      visible: false,
+    }),
+  };
+};
+
 export const availableLayers = [
   { name: "Mapbox Raster", layer: mapBoxRasterLayer },
   { name: "INFORMAR Benthic Layer", layer: infomarBenthicLayer },
