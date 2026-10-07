@@ -53,7 +53,20 @@ export const infomarBenthicLayer = new TileLayer({
   visible: false, // off by default; toggle via UI
 });
 
-export const createPlanningUnitLayer = (tilesetid, alias) => {
+// Martin serves everything through two function sources (defined in the main
+// BioProtect repo, server/db/functions): grid_tiles for planning grids and
+// layer_tiles for features and activities. The table is named in ?layer=, so
+// newly created data shows up without restarting Martin.
+const martinUrl = (source, tableName) =>
+  `${MARTIN_BASE_URL}/${source}/{z}/{x}/{y}?layer=${encodeURIComponent(tableName)}`;
+
+// Used for the project's planning grid (default) and, with
+// source = "layer_tiles", for saved features.
+export const createPlanningUnitLayer = (
+  tilesetid,
+  alias,
+  source = "grid_tiles",
+) => {
   const tableName = tilesetid.includes(".")
     ? tilesetid.split(".")[1]
     : tilesetid;
@@ -63,7 +76,7 @@ export const createPlanningUnitLayer = (tilesetid, alias) => {
     layer: new VectorTileLayer({
       source: new VectorTileSource({
         format: new MVT(),
-        url: `${MARTIN_BASE_URL}/${tableName}/{z}/{x}/{y}`,
+        url: martinUrl(source, tableName),
       }),
       visible: false,
     }),
@@ -72,8 +85,7 @@ export const createPlanningUnitLayer = (tilesetid, alias) => {
 
 /**
  * Activities are stored as standalone PostGIS tables named by `activity_name`,
- * which Martin auto-discovers and serves as MVT. We treat them like planning
- * units / features — same Martin URL shape, no tileset namespace prefix.
+ * served through the same layer_tiles source as features.
  */
 export const createActivityLayer = (activityName, alias) => {
   return {
@@ -81,7 +93,7 @@ export const createActivityLayer = (activityName, alias) => {
     layer: new VectorTileLayer({
       source: new VectorTileSource({
         format: new MVT(),
-        url: `${MARTIN_BASE_URL}/${activityName}/{z}/{x}/{y}`,
+        url: martinUrl("layer_tiles", activityName),
       }),
       visible: false,
     }),

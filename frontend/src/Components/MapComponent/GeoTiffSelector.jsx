@@ -243,7 +243,11 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
         const layers = (features || [])
           .filter((f) => f.tilesetid)
           .map((f) => {
-            const obj = createPlanningUnitLayer(f.tilesetid, f.alias);
+            const obj = createPlanningUnitLayer(
+              f.tilesetid,
+              f.alias,
+              "layer_tiles",
+            );
             mapInstance.addLayer(obj.layer);
             added.push(obj.layer);
             return obj;
