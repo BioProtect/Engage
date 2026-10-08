@@ -36,6 +36,7 @@ import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
+import ScheduleIcon from "@mui/icons-material/Schedule";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import Select from "@mui/material/Select";
@@ -47,6 +48,16 @@ import Typography from "@mui/material/Typography";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 
 const SORT_OPTIONS = [
+  {
+    value: "Newest",
+    label: "Newest",
+    icon: <ScheduleIcon fontSize="small" color="primary" />,
+  },
+  {
+    value: "Oldest",
+    label: "Oldest",
+    icon: <ScheduleIcon fontSize="small" sx={{ color: "#f57c00" }} />,
+  },
   {
     value: "A-Z",
     label: "A – Z",
@@ -92,6 +103,13 @@ const FILTER_OPTIONS = [
   },
 ];
 
+// Dates are ISO strings from the server, so they compare as text. Undated
+// items (base layers, the project PU grid) always sort last.
+const compareDates = (a, b, newestFirst) => {
+  if (!a || !b) return (a ? 0 : 1) - (b ? 0 : 1);
+  return newestFirst ? b.localeCompare(a) : a.localeCompare(b);
+};
+
 // Styles applied to the project planning-unit layer when one or more runs are
 // toggled on. Hexes selected by the run's solution are emphasised, the rest
 // fade into the basemap.
@@ -109,7 +127,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   const popperRef = useRef(null);
   const buttonRef = useRef(null);
 
-  // Layer state — each section is an array of { name, layer } objects.
+  // Layer state — each section is an array of { name, layer, date } objects.
   const [featureLayers, setFeatureLayers] = useState([]);
   const [activityLayers, setActivityLayers] = useState([]);
   const [puLayerObj, setPuLayerObj] = useState(null);
@@ -128,7 +146,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
 
   // Controls
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState("A-Z");
+  const [sortOption, setSortOption] = useState("Newest");
   const [filterOption, setFilterOption] = useState("All");
 
   const { project } = useAuth();
@@ -157,6 +175,9 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
     }
     return [...filtered].sort((a, b) => {
       switch (sortOption) {
+        case "Newest":
+        case "Oldest":
+          return compareDates(a.date, b.date, sortOption === "Newest");
         case "Z-A":
           return b.name.localeCompare(a.name);
         case "Active First":
@@ -216,6 +237,13 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
     }
     return [...list].sort((a, b) => {
       switch (sortOption) {
+        case "Newest":
+        case "Oldest":
+          return compareDates(
+            a.created_at,
+            b.created_at,
+            sortOption === "Newest",
+          );
         case "Z-A":
           return b.name.localeCompare(a.name);
         case "Active First":
@@ -250,7 +278,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
             );
             mapInstance.addLayer(obj.layer);
             added.push(obj.layer);
-            return obj;
+            return { ...obj, date: f.creation_date };
           });
         setFeatureLayers(layers);
       })
@@ -276,7 +304,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
             );
             mapInstance.addLayer(obj.layer);
             added.push(obj.layer);
-            return obj;
+            return { ...obj, date: a.creation_date };
           });
         setActivityLayers(layers);
       })
