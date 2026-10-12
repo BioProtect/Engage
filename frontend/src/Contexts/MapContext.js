@@ -2,7 +2,6 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -62,7 +61,10 @@ export const MapProvider = ({ children }) => {
   }, []);
 
   const handleCheckboxChange = useCallback((id, isVisible) => {
-    setVisibilityMap((prev) => ({ ...prev, [id]: isVisible }));
+    // Same object back when nothing changed, so React skips the re-render
+    setVisibilityMap((prev) =>
+      prev[id] === isVisible ? prev : { ...prev, [id]: isVisible },
+    );
 
     const vs = vectorSourceRef.current;
     if (!vs) return;

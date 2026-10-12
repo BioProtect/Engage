@@ -18,7 +18,6 @@ const styleCache = {};
 export const formatArea = (polygon) => {
   // const area = getArea(polygon, { projection: "EPSG:3857" });
   const area = getArea(polygon, { projection: "EPSG:4326" });
-  const nf = new Intl.NumberFormat();
 
   return area > 1e6
     ? `${numberFormat.format((area / 1e6).toFixed(2))} km²`

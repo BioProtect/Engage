@@ -53,7 +53,6 @@ const DataRow = ({
     setSelectedFeature,
     setActiveDrawingRow,
     visibilityMap,
-    handleCheckboxSelection,
     handleCheckboxChange,
     setActiveColor,
     setActiveName,
@@ -112,6 +111,8 @@ const DataRow = ({
       setActiveName(row.name);
       setActiveEunisCode(row.eunis2022code || null);
       setActiveFeatureType(featureType || null);
+      // Here rather than only in Draw's effect, so it lands in the same render
+      handleCheckboxChange(row.id, true);
       setOpenDropdownRowId(null);
       setDropdownAnchor(null);
     }

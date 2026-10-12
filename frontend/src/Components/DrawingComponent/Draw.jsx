@@ -146,6 +146,7 @@ const DrawingLayer = () => {
     setSelectedFeature,
     createFeatureStyle,
     showSnackbar,
+    shouldDrawRef,
   });
 
   useSelectionInteraction({
@@ -174,6 +175,7 @@ const DrawingLayer = () => {
     const currentRow = activeDrawingRow;
     const previousRow = prevActiveDrawingRow.current;
     const shouldDraw = !!(activeColor && currentRow);
+    shouldDrawRef.current = shouldDraw;
     drawRef.current?.setActive(shouldDraw);
 
     if (shouldDraw && currentRow) handleCheckboxChange(currentRow, true);
