@@ -1,36 +1,64 @@
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AddItemDialog from "./AddItemDialog";
 import BioProtectLogo from "../../images/bioprotect_nobgrnd.png";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import ButtonBase from "@mui/material/ButtonBase";
 import CategoryTabs from "./CategoryTabs";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CircularProgress from "@mui/material/CircularProgress";
 import ConfirmDialog from "./ConfirmDialog";
 import DataRow from "./DataRow";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import DescriptionDialog from "./DescriptionDialog";
 import DrawingDropdown from "../DrawingComponent/DrawingListDialog";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
-import Divider from "@mui/material/Divider";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FinishSessionButton from "./FinishButton";
 import IconButton from "@mui/material/IconButton";
-import MenuIcon from "@mui/icons-material/Menu";
+import LabelIcon from "@mui/icons-material/Label";
+import LabelOffIcon from "@mui/icons-material/LabelOff";
 import SearchField from "./Search";
+import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SortSelect from "./SortSelect";
-import Switch from "@mui/material/Switch";
+import StopIcon from "@mui/icons-material/Stop";
 import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
+import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import UserInfo from "../Authentication/UserInfo";
+import { alpha } from "@mui/material/styles";
 import { get_drawing_items } from "../../Api/DataMenuApi";
 import { generateColor } from "../../generateColor";
+import { iconButtonSx, sheetSurface } from "../../theme";
 import { useMapContext } from "../../Contexts/MapContext";
 
+const CATEGORIES = ["Features", "Activities"];
+
+// Sheet height per detent. Phones get a bottom sheet, tablets and up a
+// floating panel in the top-left corner.
+const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
+const HEIGHTS = {
+  peek: { xs: `calc(70px + ${SAFE_BOTTOM})`, sm: "56px" },
+  half: { xs: "50dvh", sm: "400px" },
+  full: {
+    xs: "calc(100dvh - 44px)",
+    sm: `calc(100dvh - 24px - ${SAFE_TOP})`,
+  },
+};
+
+const hairline = (t) => alpha(t.palette.primary.main, 0.14);
+
+const focusRing = {
+  "&.Mui-focusVisible": {
+    outline: "2px solid",
+    outlineColor: "primary.main",
+    outlineOffset: -2,
+  },
+};
+
 const DataMenu = () => {
-  const menuRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState({ Features: [], Activities: [] });
@@ -39,7 +67,14 @@ const DataMenu = () => {
   // { rowId, anchor } while a row's drawings dropdown is open.
   const [drawingsMenu, setDrawingsMenu] = useState(null);
   const [info, setInfo] = useState({ open: false, row: null });
-  const [isOpen, setIsOpen] = useState(true);
+  // "peek" (bar only), "half" or "full".
+  // ponytail: tap-only detents; MUI SwipeableDrawer is the upgrade path if
+  // people expect to drag the sheet.
+  const [detent, setDetent] = useState("half");
+  const lastOpenDetent = useRef("half");
+  // Detent to go back to when drawing stops; null while not drawing.
+  const detentBeforeDrawing = useRef(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Features");
   const [sortOption, setSortOption] = useState("Name");
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,8 +86,6 @@ const DataMenu = () => {
   });
   const [allSelected, setAllSelected] = useState(false);
 
-  const categoryList = ["Features", "Activities"];
-
   const {
     activeDrawingRow,
     drawnFeatures,
@@ -60,6 +93,10 @@ const DataMenu = () => {
     setDrawnFeatures,
     setSelectedFeature,
     setActiveDrawingRow,
+    setActiveEunisCode,
+    setActiveFeatureType,
+    activeColor,
+    activeName,
     visibilityMap,
     handleCheckboxChange,
     showSnackbar,
@@ -104,6 +141,22 @@ const DataMenu = () => {
       activeDrawingRow,
       ...prev.filter((id) => id !== activeDrawingRow),
     ]);
+  }, [activeDrawingRow]);
+
+  if (detent !== "peek") lastOpenDetent.current = detent;
+
+  // Get out of the way while drawing: drop to the bar when a row is picked,
+  // and come back to where the sheet was when drawing stops.
+  useEffect(() => {
+    if (activeDrawingRow) {
+      if (detentBeforeDrawing.current === null) {
+        detentBeforeDrawing.current = lastOpenDetent.current;
+      }
+      setDetent("peek");
+    } else if (detentBeforeDrawing.current !== null) {
+      setDetent(detentBeforeDrawing.current);
+      detentBeforeDrawing.current = null;
+    }
   }, [activeDrawingRow]);
 
   // Everything handed to DataRow is stable (useCallback) so the memoised rows
@@ -238,7 +291,26 @@ const DataMenu = () => {
     sortOption,
   ]);
 
-  const toggleOpen = () => setIsOpen((prev) => !prev);
+  const isPeek = detent === "peek";
+  const showSearch = searchOpen || searchQuery !== "";
+  const hasDrawings = drawnFeatures.length > 0;
+
+  const togglePeek = () => {
+    closeDrawings();
+    setDetent(isPeek ? lastOpenDetent.current : "peek");
+  };
+
+  const stopDrawing = () => {
+    setActiveDrawingRow(null);
+    setActiveEunisCode(null);
+    setActiveFeatureType(null);
+    closeDrawings();
+  };
+
+  const counts = {
+    Features: data.Features.length,
+    Activities: data.Activities.length,
+  };
 
   const drawingsRow =
     drawingsMenu &&
@@ -248,355 +320,424 @@ const DataMenu = () => {
 
   return (
     <Box
-      ref={menuRef}
+      data-detent={detent}
       sx={{
+        ...sheetSurface,
         position: "absolute",
-        top: isOpen ? `calc(20px + env(safe-area-inset-top))` : "20px",
-        left: { xs: 1, sm: 5, lg: 10 },
         zIndex: 1000,
-        bgcolor: isOpen ? "rgba(255, 255, 255, 0.5)" : "transparent",
-        backdropFilter: isOpen ? "blur(8px)" : "none",
-        border: isOpen ? "1px solid rgba(255, 255, 255, 0.35)" : "none",
-        p: 1.5,
-        borderRadius: 2,
-        boxShadow: 3,
-        width: { xs: "60vw", sm: "45vw", md: "40vw", lg: "370px" },
-        maxWidth: 360,
-        maxHeight: isOpen ? "77vh" : "8vh",
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        transition: "max-height 0.4s ease, bgcolor 0.3s ease",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        left: { xs: 0, sm: 12 },
+        right: { xs: 0, sm: "auto" },
+        bottom: { xs: 0, sm: "auto" },
+        top: { xs: "auto", sm: `calc(12px + ${SAFE_TOP})` },
+        width: { xs: "auto", sm: 320 },
+        height: HEIGHTS[detent],
+        pb: { xs: SAFE_BOTTOM, sm: 0 },
+        borderRadius: { xs: "18px 18px 0 0", sm: "14px" },
+        color: "text.primary",
+        // No CssBaseline in this app, so the theme font has to be set here.
+        fontFamily: (t) => t.typography.fontFamily,
+        fontSize: 13,
+        transition: "height 0.25s ease",
+        "@media (prefers-reduced-motion: reduce)": { transition: "none" },
       }}
     >
+      {/* Grab handle: above the bar on phones, below the footer otherwise */}
+      <Box
+        onClick={togglePeek}
+        aria-hidden
+        sx={{
+          flex: "none",
+          height: 14,
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
+          order: { xs: -1, sm: 4 },
+          "&::after": {
+            content: '""',
+            width: 36,
+            height: 4,
+            borderRadius: "2px",
+            bgcolor: (t) => alpha(t.palette.primary.main, 0.3),
+          },
+        }}
+      />
+
+      {/* Bar: always visible. Tapping it (not Stop) toggles peek. */}
       <Box
         sx={{
+          flex: "none",
+          boxSizing: "border-box",
+          height: 56,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 2,
-          mb: 1.5,
+          gap: "10px",
+          pr: "10px",
+          borderBottom: "1px solid",
+          borderColor: isPeek ? "transparent" : hairline,
         }}
       >
-        <img
-          width="58px"
-          src={BioProtectLogo}
-          alt="bioprotect logo"
-          loading="lazy"
-        />
-        <Typography
+        <ButtonBase
+          onClick={togglePeek}
+          aria-expanded={!isPeek}
+          aria-label={isPeek ? "Open menu" : "Collapse menu"}
           sx={{
-            color: "primary.main",
-            display: "flex",
-            alignItems: "center",
+            flex: 1,
+            minWidth: 0,
+            height: "100%",
+            pl: "12px",
+            gap: "10px",
+            justifyContent: "flex-start",
+            textAlign: "left",
+            fontFamily: "inherit",
+            ...focusRing,
           }}
         >
-          BioProtect Engage
-        </Typography>
-        <Button
-          onClick={toggleOpen}
-          variant="contained"
-          color="primary"
-          sx={{
-            flexGrow: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 1,
-            px: 3,
-            py: 1.25,
-            boxShadow: "0 4px 8px rgba(0, 86, 179, 0.3)",
-          }}
-        >
-          <MenuIcon />
-          Menu
-          {isOpen ? <ExpandLess /> : <ExpandMore />}
-        </Button>
-      </Box>
-
-      {isOpen && (
-        <>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              mb: 2,
-              justifyContent: "space-between",
-            }}
-          >
-            <CategoryTabs
-              categories={categoryList}
-              selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
-            />
-            <SortSelect
-              sortOption={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-            />
-          </Box>
-
-          <SearchField
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-
-          {/* Scrollable Data Rows */}
-          <Box
-            ref={scrollContainerRef}
-            sx={{
-              flexGrow: 1,
-              overflowY: "auto",
-              pr: 1,
-              "&::-webkit-scrollbar": { width: 5 },
-              "&::-webkit-scrollbar-track": {
-                borderRadius: 10,
-                bgcolor: "rgba(255,255,255,0.1)",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                borderRadius: 10,
-                bgcolor: "rgba(25, 118, 210, 0.3)",
-              },
-              "&::-webkit-scrollbar-thumb:hover": {
-                bgcolor: "rgba(25, 118, 210, 0.55)",
-              },
-            }}
-          >
-            {isLoading ? (
+          {activeDrawingRow ? (
+            <>
               <Box
                 sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  color: "text.secondary",
-                  py: 5,
+                  width: 26,
+                  height: 26,
+                  flex: "none",
+                  borderRadius: "8px",
+                  bgcolor: activeColor,
+                  boxShadow:
+                    "inset 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 0 1px rgba(9,27,53,0.18)",
                 }}
-              >
-                <CircularProgress color="primary" size={40} thickness={4} />
-                <Typography variant="body1" sx={{ mt: 2, fontWeight: 500 }}>
-                  Loading data...
-                </Typography>
-              </Box>
-            ) : filteredData.length > 0 ? (
-              filteredData.map((row) => (
-                <DataRow
-                  key={row.id}
-                  row={row}
-                  featureType={selectedCategory}
-                  deleteRow={deleteRow}
-                  isActive={row.id === activeDrawingRow}
-                  isVisible={Boolean(visibilityMap[row.id])}
-                  drawingCount={drawingCounts[row.id] || 0}
-                  onShowInfo={showInfo}
-                  onConfirm={askConfirm}
-                  onToggleDrawings={toggleDrawings}
-                  onCloseDrawings={closeDrawings}
-                />
-              ))
-            ) : (
-              <Box
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "text.secondary",
-                  mt: 4,
-                  userSelect: "none",
-                }}
-              >
-                <SearchOffIcon
-                  sx={{ fontSize: 48, mb: 1, color: "primary.main" }}
-                />
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Box
                   sx={{
-                    mb: 3,
-                    fontWeight: 500,
-                    fontSize: "1.1rem",
-                    color: "primary.main",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                    color: "text.secondary",
                   }}
                 >
-                  No results found
+                  Drawing
+                </Box>
+                <Box
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    lineHeight: 1.25,
+                    overflow: "hidden",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {activeName}
                 </Box>
               </Box>
-            )}
-          </Box>
-
-          <Divider />
-
-          <Box
-            sx={{
-              mt: 3,
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 2,
-              bgcolor: "rgba(255, 255, 255, 0.4)",
-              p: 2,
-              borderRadius: 3,
-              border: "1px solid rgba(200, 215, 240, 0.7)",
-              userSelect: "none",
-            }}
-          >
-            {/* Select All */}
-            <Tooltip
-              title={
-                allSelected ? "Deselect All Drawings" : "Select All Drawings"
-              }
-            >
+            </>
+          ) : (
+            <>
+              <img
+                width="28"
+                height="28"
+                src={BioProtectLogo}
+                alt=""
+                style={{ objectFit: "contain", flex: "none" }}
+              />
               <Box
-                onClick={handleSelectAllToggle}
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
+                  flex: 1,
+                  minWidth: 0,
+                  fontFamily: (t) => t.typography.headingFont,
+                  fontSize: 19,
+                  color: "primary.main",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <IconButton
-                  size="large"
-                  sx={{
-                    color: allSelected ? "primary.main" : "grey.700",
-                    fontSize: 30,
-                    p: 0,
-                  }}
-                  disableRipple
-                >
-                  {allSelected ? (
-                    <CheckBoxIcon fontSize="inherit" />
-                  ) : (
-                    <CheckBoxOutlineBlankIcon fontSize="inherit" />
-                  )}
-                </IconButton>
-                <Typography
-                  sx={{
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    mt: 0.5,
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {allSelected ? "Deselect All" : "Select All"}
-                </Typography>
+                BioProtect Engage
               </Box>
-            </Tooltip>
+            </>
+          )}
+          {/* Points the way the sheet will move: it opens upward on phones */}
+          <ExpandMoreIcon
+            sx={{
+              flex: "none",
+              color: "text.secondary",
+              transition: "transform 0.25s ease",
+              transform: {
+                xs: isPeek ? "rotate(180deg)" : "none",
+                sm: isPeek ? "none" : "rotate(180deg)",
+              },
+              "@media (prefers-reduced-motion: reduce)": { transition: "none" },
+            }}
+          />
+        </ButtonBase>
 
+        {activeDrawingRow && (
+          <ButtonBase
+            onClick={stopDrawing}
+            aria-label={`Stop drawing ${activeName}`}
+            sx={{
+              flex: "none",
+              height: 34,
+              pl: "9px",
+              pr: "12px",
+              gap: "5px",
+              borderRadius: "9px",
+              bgcolor: "error.main",
+              color: "#fff",
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: 700,
+              ...focusRing,
+              "&.Mui-focusVisible": {
+                outline: "2px solid",
+                outlineColor: "primary.main",
+                outlineOffset: 2,
+              },
+            }}
+          >
+            <StopIcon sx={{ fontSize: 18 }} />
+            Stop
+          </ButtonBase>
+        )}
+      </Box>
+
+      {/* Everything below the bar. Kept mounted at peek (so the rows are not
+          rebuilt on every stop) but hidden from sight, focus and readers. */}
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          visibility: isPeek ? "hidden" : "visible",
+          transition: isPeek ? "visibility 0s linear 0.25s" : "none",
+        }}
+      >
+        {/* Toolbar */}
+        <Box
+          sx={{
+            flex: "none",
+            height: 44,
+            boxSizing: "border-box",
+            display: "flex",
+            alignItems: "center",
+            gap: "2px",
+            px: "8px",
+            borderBottom: "1px solid",
+            borderColor: hairline,
+          }}
+        >
+          {showSearch ? (
+            <SearchField
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onClose={() => setSearchOpen(false)}
+            />
+          ) : (
+            <>
+              <CategoryTabs
+                categories={CATEGORIES}
+                selectedCategory={selectedCategory}
+                onSelect={setSelectedCategory}
+                counts={counts}
+              />
+              <Tooltip title="Search">
+                <IconButton
+                  aria-label="Search items"
+                  onClick={() => setSearchOpen(true)}
+                  sx={iconButtonSx}
+                >
+                  <SearchIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+          <SortSelect sortOption={sortOption} onChange={setSortOption} />
+          <Tooltip title={detent === "full" ? "Shorter list" : "Taller list"}>
+            <IconButton
+              aria-label={detent === "full" ? "Shorter list" : "Taller list"}
+              onClick={() => setDetent(detent === "full" ? "half" : "full")}
+              sx={iconButtonSx}
+            >
+              {detent === "full" ? (
+                <UnfoldLessIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <UnfoldMoreIcon sx={{ fontSize: 20 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* List */}
+        <Box
+          ref={scrollContainerRef}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            "&::-webkit-scrollbar": { width: 5 },
+            "&::-webkit-scrollbar-thumb": {
+              borderRadius: 10,
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.3),
+            },
+          }}
+        >
+          {isLoading ? (
             <Box
               sx={{
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 1.5,
+                py: 3,
+                color: "text.secondary",
+                fontWeight: 500,
               }}
             >
-              <AddItemDialog onAdd={handleAddItem} />
+              <CircularProgress color="primary" size={22} thickness={4} />
+              Loading data...
             </Box>
+          ) : filteredData.length > 0 ? (
+            filteredData.map((row) => (
+              <DataRow
+                key={row.id}
+                row={row}
+                featureType={selectedCategory}
+                deleteRow={deleteRow}
+                isActive={row.id === activeDrawingRow}
+                isVisible={Boolean(visibilityMap[row.id])}
+                drawingCount={drawingCounts[row.id] || 0}
+                onShowInfo={showInfo}
+                onConfirm={askConfirm}
+                onToggleDrawings={toggleDrawings}
+                onCloseDrawings={closeDrawings}
+              />
+            ))
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                py: 3,
+                color: "primary.main",
+                fontWeight: 600,
+                userSelect: "none",
+              }}
+            >
+              <SearchOffIcon sx={{ fontSize: 24 }} />
+              No results found
+            </Box>
+          )}
+        </Box>
 
-            <Tooltip title="Clear All Drawings">
-              <Box
-                onClick={() => {
-                  if (drawnFeatures.length === 0) return;
+        {/* Footer */}
+        <Box
+          sx={{
+            flex: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "2px",
+            p: "6px 8px",
+            borderTop: "1px solid",
+            borderColor: hairline,
+          }}
+        >
+          <Tooltip
+            title={
+              allSelected ? "Deselect all drawings" : "Select all drawings"
+            }
+          >
+            <IconButton
+              aria-label="Select all drawings"
+              aria-pressed={allSelected}
+              onClick={handleSelectAllToggle}
+              sx={{
+                ...iconButtonSx,
+                color: allSelected ? "primary.main" : "text.secondary",
+              }}
+            >
+              {allSelected ? (
+                <CheckBoxIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <CheckBoxOutlineBlankIcon sx={{ fontSize: 20 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+
+          <AddItemDialog onAdd={handleAddItem} />
+
+          <Tooltip title="Clear all drawings">
+            <span>
+              <IconButton
+                aria-label="Clear all drawings"
+                disabled={!hasDrawings}
+                onClick={() =>
                   askConfirm({
                     title: "Clear All Drawings",
                     description: "Are you sure you want to clear all drawings?",
                     onConfirm: clearAllDrawings,
-                  });
-                }}
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: drawnFeatures.length > 0 ? "pointer" : "default",
-                }}
+                  })
+                }
+                sx={{ ...iconButtonSx, color: "error.main" }}
               >
-                <IconButton
-                  disabled={drawnFeatures.length === 0}
-                  size="large"
-                  sx={{
-                    color: drawnFeatures.length > 0 ? "error.main" : "grey.400",
-                    fontSize: 30,
-                    p: 0,
-                  }}
-                  disableRipple
-                >
-                  <DeleteSweepIcon fontSize="inherit" />
-                </IconButton>
-                <Typography
-                  sx={{
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    mt: 0.5,
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Clear Drawings
-                </Typography>
-              </Box>
-            </Tooltip>
+                <DeleteSweepIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
 
-            <Box
+          <Tooltip title={showLabels ? "Hide labels" : "Show labels"}>
+            <IconButton
+              aria-label="Show labels"
+              aria-pressed={showLabels}
+              onClick={() => setShowLabels(!showLabels)}
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
+                ...iconButtonSx,
+                color: showLabels ? "primary.main" : "text.secondary",
               }}
             >
-              <Switch
-                checked={showLabels}
-                onChange={(e) => setShowLabels(e.target.checked)}
-                color="primary"
-              />
-              <Typography
-                sx={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  mt: -0.4,
-                  textAlign: "center",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {showLabels ? "Hide Labels" : "Show Labels"}
-              </Typography>
-            </Box>
-          </Box>
+              {showLabels ? (
+                <LabelIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <LabelOffIcon sx={{ fontSize: 20 }} />
+              )}
+            </IconButton>
+          </Tooltip>
 
-          <FinishSessionButton onFinish={handleFinishSession} />
           <UserInfo />
 
-          <ConfirmDialog
-            open={confirmOpen}
-            onClose={() => setConfirmOpen(false)}
-            title={confirmProps.title}
-            description={confirmProps.description}
-            onConfirm={confirmProps.onConfirm}
-          />
+          <FinishSessionButton onFinish={handleFinishSession} />
+        </Box>
+      </Box>
 
-          <DescriptionDialog
-            open={info.open}
-            onClose={() => setInfo((prev) => ({ ...prev, open: false }))}
-            title={info.row?.name}
-            description={info.row?.description}
-          />
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={confirmProps.title}
+        description={confirmProps.description}
+        onConfirm={confirmProps.onConfirm}
+      />
 
-          {drawingsRow && (
-            <DrawingDropdown
-              anchorEl={drawingsMenu.anchor}
-              open
-              onClose={closeDrawings}
-              row={drawingsRow}
-              drawings={drawnFeatures.filter(
-                (f) => f.get("id") === drawingsRow.id,
-              )}
-            />
-          )}
-        </>
+      <DescriptionDialog
+        open={info.open}
+        onClose={() => setInfo((prev) => ({ ...prev, open: false }))}
+        title={info.row?.name}
+        description={info.row?.description}
+      />
+
+      {drawingsRow && (
+        <DrawingDropdown
+          anchorEl={drawingsMenu.anchor}
+          open
+          onClose={closeDrawings}
+          row={drawingsRow}
+          drawings={drawnFeatures.filter((f) => f.get("id") === drawingsRow.id)}
+        />
       )}
     </Box>
   );

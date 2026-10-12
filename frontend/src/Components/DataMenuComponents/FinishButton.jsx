@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import AuthForm from "../Authentication/AuthForm";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CheckIcon from "@mui/icons-material/Check";
 import ClearIcon from "@mui/icons-material/Clear";
 import CloseIcon from "@mui/icons-material/Close";
 import Dialog from "@mui/material/Dialog";
@@ -136,19 +136,27 @@ const FinishSessionButton = ({ onFinish }) => {
     <>
       <Button
         variant="contained"
-        color="primary"
+        color="success"
+        disableElevation
         onClick={handleButtonClick}
         disabled={
           isAuthenticated ? drawnFeatures.length === 0 || isSaving : false
         }
-        sx={{ marginTop: 2 }}
-        startIcon={isAuthenticated ? <CheckCircleIcon /> : <LoginIcon />}
+        startIcon={isAuthenticated ? <CheckIcon /> : <LoginIcon />}
+        sx={{
+          ml: "auto",
+          flex: "none",
+          height: 34,
+          px: "12px",
+          borderRadius: "9px",
+          color: "#0b2a1c",
+          fontWeight: 700,
+          fontSize: 13,
+          textTransform: "none",
+          "& .MuiButton-startIcon": { mr: "4px" },
+        }}
       >
-        {isAuthenticated
-          ? isSaving
-            ? "Saving..."
-            : "Finish Session"
-          : "Login"}
+        {isAuthenticated ? (isSaving ? "Saving…" : "Finish") : "Login"}
       </Button>
 
       <Dialog

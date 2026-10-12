@@ -1,23 +1,41 @@
 import React, { memo, useState } from "react";
 
 import Box from "@mui/material/Box";
-import Checkbox from "@mui/material/Checkbox";
+import ButtonBase from "@mui/material/ButtonBase";
 import ClearIcon from "@mui/icons-material/Clear";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Divider from "@mui/material/Divider";
 import EditIcon from "@mui/icons-material/Edit";
 import IconButton from "@mui/material/IconButton";
-import InfoIcon from "@mui/icons-material/Info";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import Paper from "@mui/material/Paper";
 import StopIcon from "@mui/icons-material/Stop";
 import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import { delete_drawing_item } from "../../Api/DataMenuApi";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { alpha } from "@mui/material/styles";
+import { iconButtonSx } from "../../theme";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapStable } from "../../Contexts/MapContext";
+
+// Dark or white text, whichever reads better on a "#rrggbb" swatch.
+const textOn = (hex) => {
+  const channel = (i) => parseInt(hex.slice(i, i + 2), 16);
+  const luma = channel(1) * 0.299 + channel(3) * 0.587 + channel(5) * 0.114;
+  return luma > 150 ? "#12222c" : "#fff";
+};
+
+const focusRing = {
+  "&.Mui-focusVisible": {
+    outline: "2px solid",
+    outlineColor: "primary.main",
+    outlineOffset: 1,
+  },
+};
+
+const menuItemSx = { display: "flex", gap: 1, fontSize: "0.875rem" };
 
 const DataRow = ({
   row,
@@ -36,8 +54,6 @@ const DataRow = ({
 }) => {
   const [settingsMenu, setSettingsMenu] = useState(null);
 
-  const openSettings = Boolean(settingsMenu);
-
   const {
     vectorSource,
     drawnFeaturesRef,
@@ -54,7 +70,8 @@ const DataRow = ({
 
   const { isAuthenticated } = useAuth();
 
-  const canToggleCheckbox = drawingCount > 0;
+  const hasDrawings = drawingCount > 0;
+  const isHidden = !isVisible && hasDrawings;
 
   const clearRowDrawings = (rowId) => {
     drawnFeaturesRef.current.forEach((feature) => {
@@ -68,22 +85,17 @@ const DataRow = ({
     showSnackbar(`Drawings for "${row.name}" have been cleared!`);
   };
 
-  const handleSettingsMenuClick = (event) =>
-    setSettingsMenu(event.currentTarget);
   const handleSettingsMenuClose = () => setSettingsMenu(null);
 
-  const handleDeleteRow = async () => {
+  // The item list is bundled with the app (data/drawingItems), so deleting a
+  // row only removes it from this session; there is nothing to delete on the
+  // server.
+  const handleDeleteRow = () => {
     if (!isAuthenticated) return;
-    try {
-      await delete_drawing_item(row.id);
-      clearRowDrawings(row.id);
-      deleteRow(row.id);
-      showSnackbar(`${row.name} was successfully deleted!`);
-    } catch (err) {
-      console.error("Failed to delete item:", err);
-      showSnackbar(`Failed to delete item: ${err.message}`, "error");
-    }
-    handleSettingsMenuClose();
+    if (isActive) setActiveDrawingRow(null);
+    clearRowDrawings(row.id);
+    deleteRow(row.id);
+    showSnackbar(`${row.name} was successfully deleted!`);
   };
 
   const handleSetActive = () => {
@@ -104,214 +116,170 @@ const DataRow = ({
   };
 
   return (
-    <Paper
-      elevation={1}
+    <Box
       sx={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        padding: 1.5,
-        marginBottom: 1.5,
-        borderRadius: 2,
-        border: isActive
-          ? "2px solid #64b5f6"
-          : "1px solid rgba(200, 215, 240, 0.7)",
-        backgroundColor: isActive ? "#80d6ff" : "rgba(255, 255, 255, 0.4)",
-        boxShadow: isActive
-          ? "0 0 15px rgba(66, 165, 245, 0.9)"
-          : "0 1px 4px rgba(100, 130, 180, 0.1)",
+        gap: "4px",
+        boxSizing: "border-box",
+        minHeight: 44,
+        p: "5px 8px 5px 10px",
+        borderBottom: "1px solid",
+        borderColor: (t) => alpha(t.palette.primary.main, 0.14),
+        bgcolor: isActive
+          ? (t) => alpha(t.palette.primary.main, 0.1)
+          : "transparent",
       }}
     >
-      <Box
+      {/* Swatch: map colour, drawing count, opens the drawings list */}
+      <ButtonBase
+        onClick={(e) => onToggleDrawings(row.id, e.currentTarget)}
+        aria-label={`View drawings for ${row.name} (${drawingCount})`}
+        title={hasDrawings ? "View drawings" : "No drawings yet"}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.25,
-          flex: 1,
-          minWidth: 0,
+          width: 26,
+          height: 26,
+          flex: "none",
+          borderRadius: "8px",
+          bgcolor: row.color,
+          color: textOn(row.color),
+          fontFamily: "inherit",
+          fontSize: 11,
+          fontWeight: 700,
+          boxShadow:
+            "inset 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 0 1px rgba(9,27,53,0.18)",
+          ...focusRing,
         }}
       >
-        {/* Settings + Checkbox grouped tightly */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0,
-            flexShrink: 0,
-          }}
-        >
-          <IconButton
-            aria-label="more"
-            aria-controls={`menu-${row.id}`}
-            aria-haspopup="true"
-            onClick={handleSettingsMenuClick}
-            size="small"
-            sx={{ p: "2px" }}
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
+        {hasDrawings ? drawingCount : ""}
+      </ButtonBase>
 
-          <Checkbox
-            checked={isVisible}
-            onChange={(e) => handleCheckboxChange(row.id, e.target.checked)}
-            size="small"
-            disabled={isActive || !canToggleCheckbox}
-            sx={{ p: "2px" }}
-          />
-        </Box>
-
-        <Menu
-          id={`menu-${row.id}`}
-          anchorEl={settingsMenu}
-          open={openSettings}
-          onClose={handleSettingsMenuClose}
-          PaperProps={{
-            sx: {
-              minWidth: 180,
-              p: 0.5,
-              "& .MuiMenuItem-root": {
-                borderRadius: 1.5,
-                fontSize: "0.875rem",
-              },
-            },
-          }}
-        >
-          <MenuItem
-            onClick={() =>
-              onConfirm({
-                title: "Clear All Drawings",
-                description: `Are you sure you want to clear all drawings for "${row.name}"?`,
-                onConfirm: () => clearRowDrawings(row.id),
-              })
-            }
-            disabled={drawingCount === 0}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              color: "#1976d2",
-              "&:hover": { bgcolor: "rgba(25,118,210,0.1)" },
-            }}
-          >
-            <ClearIcon fontSize="small" sx={{ color: "#1976d2" }} />
-            Clear All Drawings
-          </MenuItem>
-
-          <Divider sx={{ my: 0.5, borderColor: "rgba(0,0,0,0.08)" }} />
-
-          <Tooltip title={isAuthenticated ? "" : "Login required to delete"}>
-            <span>
-              <MenuItem
-                onClick={() =>
-                  onConfirm({
-                    title: "Delete Item",
-                    description: `Are you sure you want to delete "${row.name}"?`,
-                    onConfirm: handleDeleteRow,
-                  })
-                }
-                disabled={!isAuthenticated}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  color: "error.main",
-                  "&:hover": { bgcolor: "rgba(244,67,54,0.08)" },
-                }}
-              >
-                <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
-                {isAuthenticated ? "Delete" : "Login to Delete"}
-              </MenuItem>
-            </span>
-          </Tooltip>
-        </Menu>
-
-        <Tooltip title="Show info">
-          <IconButton
-            size="small"
-            onClick={() => onShowInfo(row)}
-            aria-label="info"
-            sx={{ padding: "3px", color: "#1976d2", flexShrink: 0, ml: 2 }}
-          >
-            <InfoIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          sx={{
-            fontSize: "0.875rem",
-            color: "#333",
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          {row.name}
-        </Typography>
-      </Box>
-
-      {/* Actions */}
       <Box
-        sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          ml: "6px",
+          fontSize: 13,
+          fontWeight: 600,
+          lineHeight: 1.3,
+          overflowWrap: "anywhere",
+          color: isHidden ? "text.secondary" : "text.primary",
+        }}
       >
-        <Tooltip
-          title={drawingCount > 0 ? "View drawings" : "No drawings yet"}
-          arrow
-        >
-          <Box
-            onClick={(e) => onToggleDrawings(row.id, e.currentTarget)}
-            sx={{
-              cursor: drawingCount > 0 ? "pointer" : "default",
-              width: 30,
-              height: 30,
-              backgroundColor: row.color,
-              border: "2px solid rgba(255,255,255,0.7)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: "0.75rem",
-              fontWeight: "bold",
-              boxShadow: `0 2px 8px rgba(0,0,0,0.2), 0 0 0 2px ${row.color}44`,
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
-              ...(drawingCount > 0 && {
-                "&:hover": {
-                  transform: "scale(1.18)",
-                  boxShadow: `0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px ${row.color}66`,
-                },
-              }),
-            }}
-          >
-            {drawingCount}
-          </Box>
-        </Tooltip>
-
-        <Tooltip title={isActive ? "Stop Drawing" : "Start Drawing"} arrow>
-          <IconButton
-            onClick={handleSetActive}
-            size="small"
-            disableRipple
-            sx={{
-              borderRadius: 2,
-              backgroundColor: (theme) =>
-                isActive
-                  ? theme.palette.error.main
-                  : theme.palette.success.main,
-              color: "#fff",
-              "&:hover": {
-                backgroundColor: (theme) =>
-                  isActive
-                    ? theme.palette.error.main
-                    : theme.palette.success.main,
-              },
-            }}
-          >
-            {isActive ? <StopIcon /> : <EditIcon />}
-          </IconButton>
-        </Tooltip>
+        {row.name}
       </Box>
-    </Paper>
+
+      <IconButton
+        aria-label={`Show ${row.name} on map`}
+        aria-pressed={isVisible}
+        title={isVisible ? "Hide on map" : "Show on map"}
+        disabled={isActive || !hasDrawings}
+        onClick={() => handleCheckboxChange(row.id, !isVisible)}
+        sx={iconButtonSx}
+      >
+        {isHidden ? (
+          <VisibilityOffIcon sx={{ fontSize: 18 }} />
+        ) : (
+          <VisibilityIcon sx={{ fontSize: 18 }} />
+        )}
+      </IconButton>
+
+      <IconButton
+        aria-label={`More actions for ${row.name}`}
+        aria-controls={settingsMenu ? `menu-${row.id}` : undefined}
+        aria-haspopup="menu"
+        onClick={(e) => setSettingsMenu(e.currentTarget)}
+        sx={iconButtonSx}
+      >
+        <MoreVertIcon sx={{ fontSize: 18 }} />
+      </IconButton>
+
+      <Menu
+        id={`menu-${row.id}`}
+        anchorEl={settingsMenu}
+        open={Boolean(settingsMenu)}
+        onClose={handleSettingsMenuClose}
+        PaperProps={{
+          sx: {
+            minWidth: 180,
+            p: 0.5,
+            "& .MuiMenuItem-root": { borderRadius: 1.5 },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleSettingsMenuClose();
+            onShowInfo(row);
+          }}
+          sx={{ ...menuItemSx, color: "primary.main" }}
+        >
+          <InfoOutlinedIcon fontSize="small" />
+          Show info
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            handleSettingsMenuClose();
+            onConfirm({
+              title: "Clear All Drawings",
+              description: `Are you sure you want to clear all drawings for "${row.name}"?`,
+              onConfirm: () => clearRowDrawings(row.id),
+            });
+          }}
+          disabled={!hasDrawings}
+          sx={{ ...menuItemSx, color: "primary.main" }}
+        >
+          <ClearIcon fontSize="small" />
+          Clear All Drawings
+        </MenuItem>
+
+        <Divider sx={{ my: 0.5 }} />
+
+        <Tooltip title={isAuthenticated ? "" : "Login required to delete"}>
+          <span>
+            <MenuItem
+              onClick={() => {
+                handleSettingsMenuClose();
+                onConfirm({
+                  title: "Delete Item",
+                  description: `Are you sure you want to delete "${row.name}"?`,
+                  onConfirm: handleDeleteRow,
+                });
+              }}
+              disabled={!isAuthenticated}
+              sx={{ ...menuItemSx, color: "error.main" }}
+            >
+              <DeleteIcon fontSize="small" />
+              {isAuthenticated ? "Delete" : "Login to Delete"}
+            </MenuItem>
+          </span>
+        </Tooltip>
+      </Menu>
+
+      <ButtonBase
+        onClick={handleSetActive}
+        aria-label={
+          isActive ? `Stop drawing ${row.name}` : `Start drawing ${row.name}`
+        }
+        title={isActive ? "Stop Drawing" : "Start Drawing"}
+        sx={{
+          width: 34,
+          height: 34,
+          flex: "none",
+          borderRadius: "9px",
+          color: "#fff",
+          bgcolor: isActive ? "error.main" : "primary.main",
+          ...focusRing,
+        }}
+      >
+        {isActive ? (
+          <StopIcon sx={{ fontSize: 20 }} />
+        ) : (
+          <EditIcon sx={{ fontSize: 18 }} />
+        )}
+      </ButtonBase>
+    </Box>
   );
 };
 

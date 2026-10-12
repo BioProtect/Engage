@@ -15,6 +15,7 @@ import {
   Alert,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import AddIcon from "@mui/icons-material/Add";
 import PhishingIcon from "@mui/icons-material/Phishing";
 import SetMealIcon from "@mui/icons-material/SetMeal";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -25,6 +26,7 @@ import AbcIcon from "@mui/icons-material/Abc";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { save_drawing_item } from "../../Api/DataMenuApi";
 import { generateColor } from "../../generateColor";
+import { iconButtonSx } from "../../theme";
 
 const MAX_LENGTHS = { Name: 30, description: 200 };
 
@@ -151,55 +153,19 @@ const AddNewItem = ({ onAdd }) => {
     !errors.Category;
 
   return (
-    <div>
-      <Tooltip
-        title={isAuthenticated ? "Add New Item" : "Sign in to add items"}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            cursor: isAuthenticated ? "pointer" : "default",
-            userSelect: "none",
-            width: 40,
-          }}
-          onClick={() => {
-            if (isAuthenticated) setShowModal(true);
-          }}
-          aria-label="Add new item"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && isAuthenticated)
-              setShowModal(true);
-          }}
-        >
+    <div style={{ display: "flex" }}>
+      {/* The span lets the tooltip show while the button is disabled. */}
+      <Tooltip title={isAuthenticated ? "Add item" : "Sign in to add items"}>
+        <span>
           <IconButton
-            color="primary"
-            size="large"
-            sx={{
-              fontSize: 28,
-              p: 0,
-              color: isAuthenticated ? "primary.main" : "grey.400",
-              pointerEvents: isAuthenticated ? "auto" : "none",
-            }}
-            disableRipple
+            aria-label="Add item"
+            disabled={!isAuthenticated}
+            onClick={() => setShowModal(true)}
+            sx={iconButtonSx}
           >
-            <AddCircleIcon fontSize="inherit" />
+            <AddIcon sx={{ fontSize: 20 }} />
           </IconButton>
-          <Typography
-            sx={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              mt: 0.5,
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              color: isAuthenticated ? "text.primary" : "grey.400",
-            }}
-          >
-            Add Item
-          </Typography>
-        </Box>
+        </span>
       </Tooltip>
 
       <Dialog
