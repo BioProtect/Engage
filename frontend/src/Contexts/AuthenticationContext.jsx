@@ -5,7 +5,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -13,121 +12,77 @@ const AuthContext = createContext();
 
 const LOGOUT_TIME_MS = 2 * 60 * 60 * 1000;
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [project, setProject] = useState(() => {
-    const savedProject = localStorage.getItem("project");
-    return savedProject ? JSON.parse(savedProject) : null;
-  });
+const readStored = (key) => {
+  const raw = localStorage.getItem(key);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw; // tokens saved by earlier versions were stored unquoted
+  }
+};
 
-  const logoutTimeoutRef = useRef(null);
+// useState that mirrors its value to localStorage (null removes the key).
+const usePersistedState = (key) => {
+  const [value, setValue] = useState(() => readStored(key));
+
+  useEffect(() => {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+};
+
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = usePersistedState("token");
+  const [user, setUser] = usePersistedState("user");
+  const [project, setProject] = usePersistedState("project");
+  const [loginTimestamp, setLoginTimestamp] =
+    usePersistedState("loginTimestamp");
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     setProject(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("project");
-    localStorage.removeItem("loginTimestamp");
-    if (logoutTimeoutRef.current) {
-      clearTimeout(logoutTimeoutRef.current);
-      logoutTimeoutRef.current = null;
-    }
-  }, []);
+    setLoginTimestamp(null);
+  }, [setToken, setUser, setProject, setLoginTimestamp]);
 
-  const login = useCallback(async (username, password) => {
-    const res = await api.login(username, password);
-    console.log("res ", res);
-    if (res.accessToken) {
+  const login = useCallback(
+    async (username, password) => {
+      const res = await api.login(username, password);
+      if (!res.accessToken) throw new Error(res.msg || "Login failed");
       setToken(res.accessToken);
       setUser({ username });
       setProject(res.project || null);
-      localStorage.setItem("loginTimestamp", Date.now().toString());
-    } else {
-      throw new Error(res.msg || "Login failed");
-    }
-  }, []);
+      setLoginTimestamp(Date.now());
+    },
+    [setToken, setUser, setProject, setLoginTimestamp],
+  );
 
   const signup = useCallback(async (username, password) => {
     const res = await api.signup(username, password);
-    if (res.msg === "Signup successful") {
-      return;
-    } else {
+    if (res.msg !== "Signup successful") {
       throw new Error(res.msg || "Signup failed");
     }
   }, []);
 
+  // Log out two hours after login, including across page reloads.
   useEffect(() => {
-    if (token && user) {
-      const loginTimestamp = parseInt(
-        localStorage.getItem("loginTimestamp"),
-        10,
-      );
-      if (!loginTimestamp) {
-        logout();
-        return;
-      }
+    if (!token || !user) return;
+    if (!loginTimestamp) return logout();
 
-      const elapsed = Date.now() - loginTimestamp;
-      const remaining = LOGOUT_TIME_MS - elapsed;
-
-      if (remaining <= 0) {
-        logout();
-      } else {
-        if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
-        logoutTimeoutRef.current = setTimeout(logout, remaining);
-      }
-    } else {
-      if (logoutTimeoutRef.current) {
-        clearTimeout(logoutTimeoutRef.current);
-        logoutTimeoutRef.current = null;
-      }
-    }
-  }, [token, user, logout]);
-
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (project) {
-      localStorage.setItem("project", JSON.stringify(project));
-    } else {
-      localStorage.removeItem("project");
-    }
-  }, [project]);
+    const timeout = setTimeout(
+      logout,
+      Math.max(0, LOGOUT_TIME_MS - (Date.now() - loginTimestamp)),
+    );
+    return () => clearTimeout(timeout);
+  }, [token, user, loginTimestamp, logout]);
 
   const isAuthenticated = !!token && !!user;
 
   return (
     <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        login,
-        signup,
-        logout,
-        token,
-        user,
-        project,
-        setProject,
-      }}
+      value={{ isAuthenticated, login, signup, logout, token, user, project }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AddItemDialog from "./AddItemDialog";
 import BioProtectLogo from "../../images/bioprotect_nobgrnd.png";
@@ -11,6 +11,8 @@ import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CircularProgress from "@mui/material/CircularProgress";
 import ConfirmDialog from "./ConfirmDialog";
 import DataRow from "./DataRow";
+import DescriptionDialog from "./DescriptionDialog";
+import DrawingDropdown from "../DrawingComponent/DrawingListDialog";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import Divider from "@mui/material/Divider";
 import FinishSessionButton from "./FinishButton";
@@ -24,7 +26,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import UserInfo from "../Authentication/UserInfo";
 import { get_drawing_items } from "../../Api/DataMenuApi";
-import { useColorContext } from "../../Contexts/ColorContext";
+import { generateColor } from "../../generateColor";
 import { useMapContext } from "../../Contexts/MapContext";
 
 const DataMenu = () => {
@@ -32,10 +34,11 @@ const DataMenu = () => {
   const scrollContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState({ Features: [], Activities: [] });
-  const [lastSelectedId, setLastSelectedId] = useState(null);
-  const [openDropdownRowId, setOpenDropdownRowId] = useState(null);
-  const [dropdownAnchor, setDropdownAnchor] = useState(null);
-  const [userOpenedDropdown, setUserOpenedDropdown] = useState(false);
+  // Row ids in the order they were last picked for drawing, newest first.
+  const [recentIds, setRecentIds] = useState([]);
+  // { rowId, anchor } while a row's drawings dropdown is open.
+  const [drawingsMenu, setDrawingsMenu] = useState(null);
+  const [info, setInfo] = useState({ open: false, row: null });
   const [isOpen, setIsOpen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Features");
   const [sortOption, setSortOption] = useState("Name");
@@ -47,15 +50,12 @@ const DataMenu = () => {
     onConfirm: () => {},
   });
   const [allSelected, setAllSelected] = useState(false);
-  const { generateColor } = useColorContext();
 
   const categoryList = ["Features", "Activities"];
 
   const {
     activeDrawingRow,
     drawnFeatures,
-    map,
-    drawRef,
     vectorSource,
     setDrawnFeatures,
     setSelectedFeature,
@@ -96,25 +96,44 @@ const DataMenu = () => {
     };
 
     loadData();
-  }, [generateColor]);
+  }, []);
 
   useEffect(() => {
-    if (activeDrawingRow) setLastSelectedId(activeDrawingRow);
+    if (!activeDrawingRow) return;
+    setRecentIds((prev) => [
+      activeDrawingRow,
+      ...prev.filter((id) => id !== activeDrawingRow),
+    ]);
   }, [activeDrawingRow]);
 
+  // Everything handed to DataRow is stable (useCallback) so the memoised rows
+  // only re-render when their own props change.
+  const closeDrawings = useCallback(() => setDrawingsMenu(null), []);
+
+  const toggleDrawings = useCallback(
+    (rowId, anchor) =>
+      setDrawingsMenu((prev) =>
+        prev?.rowId === rowId ? null : { rowId, anchor },
+      ),
+    [],
+  );
+
+  const askConfirm = useCallback((props) => {
+    setConfirmProps(props);
+    setConfirmOpen(true);
+  }, []);
+
+  const showInfo = useCallback((row) => setInfo({ open: true, row }), []);
+
+  // The dropdown is anchored to a row, so close it when the list scrolls.
   useEffect(() => {
-    if (!openDropdownRowId) return;
+    if (!drawingsMenu) return;
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      setOpenDropdownRowId(null);
-      setUserOpenedDropdown(false);
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [openDropdownRowId]);
+    container.addEventListener("scroll", closeDrawings, { passive: true });
+    return () => container.removeEventListener("scroll", closeDrawings);
+  }, [drawingsMenu, closeDrawings]);
 
   const clearAllDrawings = () => {
     if (drawnFeatures.length === 0) return;
@@ -128,21 +147,26 @@ const DataMenu = () => {
     showSnackbar("All drawings cleared!");
   };
 
-  const deleteRow = (rowId) => {
-    const newData = { ...data };
-    Object.keys(newData).forEach((category) => {
-      newData[category] = newData[category].filter((row) => row.id !== rowId);
+  const deleteRow = useCallback((rowId) => {
+    setData((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).map(([category, rows]) => [
+          category,
+          rows.filter((row) => row.id !== rowId),
+        ]),
+      ),
+    );
+    setDrawingsMenu((prev) => (prev?.rowId === rowId ? null : prev));
+  }, []);
+
+  const drawingCounts = useMemo(() => {
+    const counts = {};
+    drawnFeatures.forEach((f) => {
+      const id = f.get("id");
+      counts[id] = (counts[id] || 0) + 1;
     });
-    setData(newData);
-
-    if (drawRef.current) map.removeInteraction(drawRef.current);
-
-    if (openDropdownRowId === rowId) {
-      setOpenDropdownRowId(null);
-      setDropdownAnchor(null);
-      setUserOpenedDropdown(false);
-    }
-  };
+    return counts;
+  }, [drawnFeatures]);
 
   const handleSelectAllToggle = () => {
     const items = Object.values(data)
@@ -166,21 +190,17 @@ const DataMenu = () => {
 
   const handleFinishSession = () => {
     setActiveDrawingRow(null);
-    drawRef.current?.setActive(false);
     drawnFeatures.forEach((feature) =>
       handleCheckboxChange(feature.get("id"), false),
     );
   };
 
   const filteredData = useMemo(() => {
-    let drawingCounts = null;
-    if (sortOption === "Drawings") {
-      drawingCounts = {};
-      drawnFeatures.forEach((f) => {
-        const id = f.get("id");
-        drawingCounts[id] = (drawingCounts[id] || 0) + 1;
-      });
-    }
+    // Rows never drawn with keep their place after the ones that were.
+    const recency = (id) => {
+      const index = recentIds.indexOf(id);
+      return index === -1 ? recentIds.length : index;
+    };
 
     return data[selectedCategory]
       .filter((row) =>
@@ -203,9 +223,7 @@ const DataMenu = () => {
           case "Drawings":
             return (drawingCounts[b.id] || 0) - (drawingCounts[a.id] || 0);
           case "Recent":
-            if (a.id === lastSelectedId) return -1;
-            if (b.id === lastSelectedId) return 1;
-            return 0;
+            return recency(a.id) - recency(b.id);
           default:
             return 0;
         }
@@ -214,13 +232,19 @@ const DataMenu = () => {
     data,
     selectedCategory,
     searchQuery,
-    drawnFeatures,
+    drawingCounts,
     visibilityMap,
-    lastSelectedId,
+    recentIds,
     sortOption,
   ]);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
+
+  const drawingsRow =
+    drawingsMenu &&
+    Object.values(data)
+      .flat()
+      .find((row) => row.id === drawingsMenu.rowId);
 
   return (
     <Box
@@ -362,12 +386,13 @@ const DataMenu = () => {
                   row={row}
                   featureType={selectedCategory}
                   deleteRow={deleteRow}
-                  openDropdownRowId={openDropdownRowId}
-                  setOpenDropdownRowId={setOpenDropdownRowId}
-                  dropdownAnchor={dropdownAnchor}
-                  setDropdownAnchor={setDropdownAnchor}
-                  userOpenedDropdown={userOpenedDropdown}
-                  setUserOpenedDropdown={setUserOpenedDropdown}
+                  isActive={row.id === activeDrawingRow}
+                  isVisible={Boolean(visibilityMap[row.id])}
+                  drawingCount={drawingCounts[row.id] || 0}
+                  onShowInfo={showInfo}
+                  onConfirm={askConfirm}
+                  onToggleDrawings={toggleDrawings}
+                  onCloseDrawings={closeDrawings}
                 />
               ))
             ) : (
@@ -475,12 +500,11 @@ const DataMenu = () => {
               <Box
                 onClick={() => {
                   if (drawnFeatures.length === 0) return;
-                  setConfirmProps({
+                  askConfirm({
                     title: "Clear All Drawings",
                     description: "Are you sure you want to clear all drawings?",
                     onConfirm: clearAllDrawings,
                   });
-                  setConfirmOpen(true);
                 }}
                 sx={{
                   display: "flex",
@@ -553,6 +577,25 @@ const DataMenu = () => {
             description={confirmProps.description}
             onConfirm={confirmProps.onConfirm}
           />
+
+          <DescriptionDialog
+            open={info.open}
+            onClose={() => setInfo((prev) => ({ ...prev, open: false }))}
+            title={info.row?.name}
+            description={info.row?.description}
+          />
+
+          {drawingsRow && (
+            <DrawingDropdown
+              anchorEl={drawingsMenu.anchor}
+              open
+              onClose={closeDrawings}
+              row={drawingsRow}
+              drawings={drawnFeatures.filter(
+                (f) => f.get("id") === drawingsRow.id,
+              )}
+            />
+          )}
         </>
       )}
     </Box>

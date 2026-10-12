@@ -1,43 +1,31 @@
-import { useEffect } from "react";
 import Map from "./Components/MapComponent/Map";
 import DataMenu from "./Components/DataMenuComponents/DataMenu";
 import { MapProvider } from "./Contexts/MapContext";
 import { AuthProvider } from "./Contexts/AuthenticationContext";
-import { ColorProvider } from "./Contexts/ColorContext";
+import { ThemeProvider } from "@mui/material/styles";
 import Draw from "./Components/DrawingComponent/Draw";
+import theme from "./theme";
 import "./App.css";
 
-const App = () => {
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
-    };
-    setVh();
-    window.addEventListener("resize", setVh);
-    return () => window.removeEventListener("resize", setVh);
-  }, []);
-
-  return (
+const App = () => (
+  <ThemeProvider theme={theme}>
     <AuthProvider>
-      <ColorProvider>
-        <MapProvider>
-          <div
-            style={{
-              width: "100vw",
-              height: "calc(var(--vh, 1vh) * 100)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <Map />
-            <DataMenu />
-            <Draw />
-          </div>
-        </MapProvider>
-      </ColorProvider>
+      <MapProvider>
+        <div
+          style={{
+            width: "100vw",
+            height: "100dvh",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <Map />
+          <DataMenu />
+          <Draw />
+        </div>
+      </MapProvider>
     </AuthProvider>
-  );
-};
+  </ThemeProvider>
+);
 
 export default App;

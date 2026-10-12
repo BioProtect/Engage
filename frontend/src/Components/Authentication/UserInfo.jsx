@@ -3,12 +3,12 @@ import { Button, Typography, Box, Divider } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonIcon from "@mui/icons-material/Person";
 import { useAuth } from "../../Contexts/AuthenticationContext";
-import { useMapContext } from "../../Contexts/MapContext";
+import { useMapStable } from "../../Contexts/MapContext";
 
 const UserInfo = () => {
   const { user, logout } = useAuth();
 
-  const { showSnackbar } = useMapContext();
+  const { showSnackbar } = useMapStable();
 
   const handleLogout = () => {
     logout();

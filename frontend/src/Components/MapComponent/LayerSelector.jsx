@@ -1,9 +1,5 @@
 import { Fill, Stroke, Style } from "ol/style";
-import {
-  availableLayers,
-  createActivityLayer,
-  createPlanningUnitLayer,
-} from "./BaseMapLayers";
+import { availableLayers, createMartinLayer } from "./BaseMapLayers";
 import {
   get_activity_layers,
   get_feature_layers,
@@ -122,7 +118,7 @@ const RUN_UNSELECTED_STYLE = new Style({
   stroke: new Stroke({ color: "rgba(120, 120, 120, 0.35)", width: 0.5 }),
 });
 
-const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
+const LayerSelector = ({ mapInstance }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const popperRef = useRef(null);
   const buttonRef = useRef(null);
@@ -141,7 +137,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   // Bump to retrigger the styling effect when a fetch completes.
   const [runResultsVersion, setRunResultsVersion] = useState(0);
 
-  // Visibility selection — feature + activity layers, keyed by name.
+  // Visibility selection: ids of the layers switched on.
   const [activeLayers, setActiveLayers] = useState(new Set());
 
   // Controls
@@ -169,9 +165,9 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
       filtered = filtered.filter((l) => l.name.toLowerCase().includes(q));
     }
     if (filterOption === "Active") {
-      filtered = filtered.filter((l) => activeLayers.has(l.name));
+      filtered = filtered.filter((l) => activeLayers.has(l.id));
     } else if (filterOption === "Inactive") {
-      filtered = filtered.filter((l) => !activeLayers.has(l.name));
+      filtered = filtered.filter((l) => !activeLayers.has(l.id));
     }
     return [...filtered].sort((a, b) => {
       switch (sortOption) {
@@ -182,13 +178,13 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
           return b.name.localeCompare(a.name);
         case "Active First":
           return (
-            (activeLayers.has(b.name) ? 1 : 0) -
-            (activeLayers.has(a.name) ? 1 : 0)
+            (activeLayers.has(b.id) ? 1 : 0) -
+            (activeLayers.has(a.id) ? 1 : 0)
           );
         case "Inactive First":
           return (
-            (activeLayers.has(a.name) ? 1 : 0) -
-            (activeLayers.has(b.name) ? 1 : 0)
+            (activeLayers.has(a.id) ? 1 : 0) -
+            (activeLayers.has(b.id) ? 1 : 0)
           );
         default:
           return a.name.localeCompare(b.name);
@@ -262,55 +258,37 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
 
   // --- Effects: load layers from the backend ---
 
-  // Saved features
+  // Saved features and activities: both are tables served by layer_tiles.
   useEffect(() => {
     if (!mapInstance) return;
+    let cancelled = false;
     const added = [];
-    get_feature_layers()
-      .then((features) => {
-        const layers = (features || [])
-          .filter((f) => f.tilesetid)
-          .map((f) => {
-            const obj = createPlanningUnitLayer(
-              f.tilesetid,
-              f.alias,
-              "layer_tiles",
-            );
-            mapInstance.addLayer(obj.layer);
-            added.push(obj.layer);
-            return { ...obj, date: f.creation_date };
-          });
-        setFeatureLayers(layers);
-      })
-      .catch((err) => console.error("Failed to load feature layers:", err));
+
+    const load = (fetchRows, tableKey, setLayers, what) =>
+      fetchRows()
+        .then((rows) => {
+          if (cancelled) return;
+          setLayers(
+            rows
+              .filter((row) => row[tableKey])
+              .map((row) => {
+                const obj = createMartinLayer(
+                  row[tableKey],
+                  row.alias || row[tableKey],
+                );
+                mapInstance.addLayer(obj.layer);
+                added.push(obj.layer);
+                return { ...obj, date: row.creation_date };
+              }),
+          );
+        })
+        .catch((err) => console.error(`Failed to load ${what} layers:`, err));
+
+    load(get_feature_layers, "tilesetid", setFeatureLayers, "feature");
+    load(get_activity_layers, "activity_name", setActivityLayers, "activity");
 
     return () => {
-      added.forEach((layer) => mapInstance.removeLayer(layer));
-    };
-  }, [mapInstance]);
-
-  // Saved activities
-  useEffect(() => {
-    if (!mapInstance) return;
-    const added = [];
-    get_activity_layers()
-      .then((activities) => {
-        const layers = (activities || [])
-          .filter((a) => a.activity_name)
-          .map((a) => {
-            const obj = createActivityLayer(
-              a.activity_name,
-              a.alias || a.activity_name,
-            );
-            mapInstance.addLayer(obj.layer);
-            added.push(obj.layer);
-            return { ...obj, date: a.creation_date };
-          });
-        setActivityLayers(layers);
-      })
-      .catch((err) => console.error("Failed to load activity layers:", err));
-
-    return () => {
+      cancelled = true;
       added.forEach((layer) => mapInstance.removeLayer(layer));
     };
   }, [mapInstance]);
@@ -322,7 +300,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
       return;
     }
 
-    const obj = createPlanningUnitLayer(puTilesetId, puAlias);
+    const obj = createMartinLayer(puTilesetId, puAlias, "grid_tiles");
     mapInstance.addLayer(obj.layer);
     setPuLayerObj(obj);
 
@@ -373,22 +351,21 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   const handleOpen = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const toggleLayer = (name) => {
+  const toggleLayer = (id) => {
     if (!mapInstance) return;
-    const selected = allLayers.find((l) => l.name === name);
+    const selected = allLayers.find((l) => l.id === id);
     if (!selected) return;
 
     const newActiveLayers = new Set(activeLayers);
-    if (newActiveLayers.has(name)) {
-      newActiveLayers.delete(name);
+    if (newActiveLayers.has(id)) {
+      newActiveLayers.delete(id);
       selected.layer.setVisible(false);
     } else {
-      newActiveLayers.add(name);
+      newActiveLayers.add(id);
       selected.layer.setVisible(true);
     }
 
     setActiveLayers(newActiveLayers);
-    setGeoTiffLayer(selected.layer);
   };
 
   const toggleRun = async (runId) => {
@@ -416,7 +393,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
       puLayerObj.layer.setVisible(true);
       setActiveLayers((prev) => {
         const updated = new Set(prev);
-        updated.add(puLayerObj.name);
+        updated.add(puLayerObj.id);
         return updated;
       });
     }
@@ -448,10 +425,10 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
     if (!mapInstance) return;
     const allOn = activeLayers.size === allLayers.length;
     const newActiveLayers = new Set();
-    allLayers.forEach(({ layer, name }) => {
+    allLayers.forEach(({ layer, id }) => {
       const shouldTurnOn = !allOn;
       layer.setVisible(shouldTurnOn);
-      if (shouldTurnOn) newActiveLayers.add(name);
+      if (shouldTurnOn) newActiveLayers.add(id);
     });
     setActiveLayers(newActiveLayers);
   };
@@ -521,10 +498,10 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
     if (items.length === 0) return renderEmpty(emptyMessage);
     return (
       <List dense sx={listSx}>
-        {items.map(({ name }) => {
-          const isActive = activeLayers.has(name);
+        {items.map(({ id, name }) => {
+          const isActive = activeLayers.has(id);
           return (
-            <ListItem key={name} disablePadding>
+            <ListItem key={id} disablePadding>
               <Paper
                 elevation={isActive ? 3 : 1}
                 sx={{
@@ -547,7 +524,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
               >
                 <ListItemButton
                   selected={isActive}
-                  onClick={() => toggleLayer(name)}
+                  onClick={() => toggleLayer(id)}
                   sx={{ py: 0.8 }}
                 >
                   <ListItemText
@@ -824,18 +801,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
                   "& fieldset": { borderColor: "rgba(255,255,255,0.45)" },
                   "&:hover fieldset": { borderColor: "rgba(255,255,255,0.7)" },
                 }}
-                MenuProps={{
-                  sx: { zIndex: 2000 },
-                  PaperProps: {
-                    sx: {
-                      background: "rgba(235,242,255,0.6)",
-                      backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(255,255,255,0.6)",
-                      borderRadius: 2,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                    },
-                  },
-                }}
+                MenuProps={{ sx: { zIndex: 2000 } }}
                 renderValue={(val) => {
                   const opt = SORT_OPTIONS.find((o) => o.value === val);
                   return (
@@ -873,18 +839,7 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
                   "& fieldset": { borderColor: "rgba(255,255,255,0.45)" },
                   "&:hover fieldset": { borderColor: "rgba(255,255,255,0.7)" },
                 }}
-                MenuProps={{
-                  sx: { zIndex: 2000 },
-                  PaperProps: {
-                    sx: {
-                      background: "rgba(235,242,255,0.6)",
-                      backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(255,255,255,0.6)",
-                      borderRadius: 2,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                    },
-                  },
-                }}
+                MenuProps={{ sx: { zIndex: 2000 } }}
                 renderValue={(val) => {
                   const opt = FILTER_OPTIONS.find((o) => o.value === val);
                   return (
@@ -1001,4 +956,4 @@ const GeoTiffSelectorBubble = ({ mapInstance, setGeoTiffLayer }) => {
   );
 };
 
-export default GeoTiffSelectorBubble;
+export default LayerSelector;

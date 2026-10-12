@@ -24,7 +24,7 @@ import CategoryIcon from "@mui/icons-material/Category";
 import AbcIcon from "@mui/icons-material/Abc";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { save_drawing_item } from "../../Api/DataMenuApi";
-import { useColorContext } from "../../Contexts/ColorContext";
+import { generateColor } from "../../generateColor";
 
 const MAX_LENGTHS = { Name: 30, description: 200 };
 
@@ -64,7 +64,6 @@ const FieldLabel = ({ icon, text }) => (
 
 const AddNewItem = ({ onAdd }) => {
   const { isAuthenticated } = useAuth();
-  const { generateColor } = useColorContext();
 
   const [showModal, setShowModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -209,24 +208,8 @@ const AddNewItem = ({ onAdd }) => {
         maxWidth="sm"
         TransitionComponent={Grow}
         transitionDuration={300}
-        BackdropProps={{
-          sx: {
-            backgroundColor: "rgba(0,0,0,0.15)",
-            backdropFilter: "blur(4px)",
-          },
-        }}
         PaperProps={{
-          sx: {
-            m: 2,
-            borderRadius: 3,
-            background: "rgba(235, 242, 255, 0.55)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.6)",
-            boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
-            overflow: "hidden",
-            minWidth: { xs: "80vw", sm: 380 },
-            maxWidth: 420,
-          },
+          sx: { minWidth: { xs: "80vw", sm: 380 }, maxWidth: 420 },
         }}
       >
         <IconButton

@@ -5,26 +5,19 @@ import VectorTileLayer from "ol/layer/VectorTile.js";
 import VectorTileSource from "ol/source/VectorTile.js";
 import XYZ from "ol/source/XYZ.js";
 
-const TILE_SOURCE = "mapbox";
 const MAPBOX_PUBLIC_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 const MAPBOX_USER = "craicerjack";
 const TILESET_ID = "impact_e0db42b42ced448fafbb6d66a";
 const MAPBOX_STYLE = "streets-v12";
-//####################################################################################
-// const MARTIN_BASE_URL = "http://localhost:3000";
 const MARTIN_BASE_URL = process.env.REACT_APP_MARTIN_BASE_URL;
-console.log("MARTIN_BASE_URL ", MARTIN_BASE_URL);
-//####################################################################################
 
 export const getTileLayerSource = () =>
-  TILE_SOURCE === "mapbox"
-    ? new XYZ({
-        url: `https://api.mapbox.com/styles/v1/mapbox/${MAPBOX_STYLE}/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_PUBLIC_ACCESS_TOKEN}`,
-        tileSize: 512,
-        maxZoom: 22,
-        crossOrigin: "anonymous",
-      })
-    : new XYZ();
+  new XYZ({
+    url: `https://api.mapbox.com/styles/v1/mapbox/${MAPBOX_STYLE}/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_PUBLIC_ACCESS_TOKEN}`,
+    tileSize: 512,
+    maxZoom: 22,
+    crossOrigin: "anonymous",
+  });
 
 export const mapBoxRasterLayer = new TileLayer({
   source: new XYZ({
@@ -57,50 +50,24 @@ export const infomarBenthicLayer = new TileLayer({
 // BioProtect repo, server/db/functions): grid_tiles for planning grids and
 // layer_tiles for features and activities. The table is named in ?layer=, so
 // newly created data shows up without restarting Martin.
-const martinUrl = (source, tableName) =>
-  `${MARTIN_BASE_URL}/${source}/{z}/{x}/{y}?layer=${encodeURIComponent(tableName)}`;
-
-// Used for the project's planning grid (default) and, with
-// source = "layer_tiles", for saved features.
-export const createPlanningUnitLayer = (
-  tilesetid,
-  alias,
-  source = "grid_tiles",
-) => {
-  const tableName = tilesetid.includes(".")
-    ? tilesetid.split(".")[1]
-    : tilesetid;
-
-  return {
-    name: alias,
-    layer: new VectorTileLayer({
-      source: new VectorTileSource({
-        format: new MVT(),
-        url: martinUrl(source, tableName),
-      }),
-      visible: false,
+// `table` may be a bare table name or a "user.table" tileset id.
+export const createMartinLayer = (table, alias, source = "layer_tiles") => ({
+  id: table, // names are not unique (two activities can share one)
+  name: alias,
+  layer: new VectorTileLayer({
+    source: new VectorTileSource({
+      format: new MVT(),
+      url: `${MARTIN_BASE_URL}/${source}/{z}/{x}/{y}?layer=${encodeURIComponent(table.split(".").pop())}`,
     }),
-  };
-};
-
-/**
- * Activities are stored as standalone PostGIS tables named by `activity_name`,
- * served through the same layer_tiles source as features.
- */
-export const createActivityLayer = (activityName, alias) => {
-  return {
-    name: alias,
-    layer: new VectorTileLayer({
-      source: new VectorTileSource({
-        format: new MVT(),
-        url: martinUrl("layer_tiles", activityName),
-      }),
-      visible: false,
-    }),
-  };
-};
+    visible: false,
+  }),
+});
 
 export const availableLayers = [
-  { name: "Mapbox Raster", layer: mapBoxRasterLayer },
-  { name: "INFORMAR Benthic Layer", layer: infomarBenthicLayer },
+  { id: "mapbox-raster", name: "Mapbox Raster", layer: mapBoxRasterLayer },
+  {
+    id: "infomar-benthic",
+    name: "INFORMAR Benthic Layer",
+    layer: infomarBenthicLayer,
+  },
 ];

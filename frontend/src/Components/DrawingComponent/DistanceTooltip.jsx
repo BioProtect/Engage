@@ -1,14 +1,13 @@
-import React, { useEffect, useRef } from "react";
-import ReactDOM from "react-dom/client";
+import { useEffect, useRef } from "react";
 import Overlay from "ol/Overlay";
 
 const tooltipStyle = {
   position: "absolute",
   background: "rgba(30, 144, 255, 0.85)",
-  borderRadius: 6,
+  borderRadius: "6px",
   color: "#fff",
   padding: "4px 10px",
-  fontSize: 12,
+  fontSize: "12px",
   fontWeight: 500,
   pointerEvents: "none",
   transform: "translateY(-100%)",
@@ -21,14 +20,12 @@ const tooltipStyle = {
 
 export const DistanceTooltip = ({ map, coordinate, text }) => {
   const overlayRef = useRef(null);
-  const rootRef = useRef(null);
 
   useEffect(() => {
-    if (!map || overlayRef.current) return;
+    if (!map) return;
 
     const container = document.createElement("div");
     Object.assign(container.style, tooltipStyle);
-    const root = ReactDOM.createRoot(container);
 
     const overlay = new Overlay({
       element: container,
@@ -36,28 +33,20 @@ export const DistanceTooltip = ({ map, coordinate, text }) => {
       positioning: "bottom-left",
       stopEvent: false,
     });
-
     map.addOverlay(overlay);
     overlayRef.current = overlay;
-    rootRef.current = root;
 
     return () => {
-      if (overlayRef.current) {
-        map.removeOverlay(overlayRef.current);
-        overlayRef.current = null;
-      }
-      if (rootRef.current) {
-        rootRef.current.unmount();
-        rootRef.current = null;
-      }
+      map.removeOverlay(overlay);
+      overlayRef.current = null;
     };
   }, [map]);
 
   useEffect(() => {
-    if (overlayRef.current && rootRef.current && coordinate) {
-      overlayRef.current.setPosition(coordinate);
-      rootRef.current.render(<span>{text}</span>);
-    }
+    const overlay = overlayRef.current;
+    if (!overlay || !coordinate) return;
+    overlay.setPosition(coordinate);
+    overlay.getElement().textContent = text;
   }, [coordinate, text]);
 
   return null;

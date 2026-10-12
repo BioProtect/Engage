@@ -3,20 +3,8 @@ import { Fill, Stroke, Style, Text } from "ol/style";
 import { getArea } from "ol/sphere";
 
 const numberFormat = new Intl.NumberFormat();
-const CACHE_MAX = 500;
-const styleCache = {};
-
-// export const formatArea = (polygon) => {
-//   const area = getArea(polygon);
-//   const nf = new Intl.NumberFormat();
-
-//   return area > 1e6
-//     ? `${nf.format((area / 1e6).toFixed(2))} km²`
-//     : `${nf.format(area.toFixed(0))} m²`;
-// };
 
 export const formatArea = (polygon) => {
-  // const area = getArea(polygon, { projection: "EPSG:3857" });
   const area = getArea(polygon, { projection: "EPSG:4326" });
 
   return area > 1e6
@@ -37,9 +25,6 @@ export const createFeatureStyle = (
   if (!geometry) return null;
 
   const zoom = map?.getView ? map.getView().getZoom() : 10;
-  const cacheKey = `${feature.ol_uid}-${zoom}-${showLabels}-${selected}-${number}-${areaLabel}`;
-  if (styleCache[cacheKey]) return styleCache[cacheKey];
-
   const fillColor = selected ? `${color}aa` : `${color}33`;
   const strokeWidth = selected ? 3 : 2;
   const lineDash = selected ? undefined : [6, 4];
@@ -97,11 +82,5 @@ export const createFeatureStyle = (
     });
   }
 
-  if (Object.keys(styleCache).length >= CACHE_MAX) {
-    const keys = Object.keys(styleCache);
-    for (let i = 0; i < keys.length / 2; i++) delete styleCache[keys[i]];
-  }
-
-  styleCache[cacheKey] = styles;
   return styles;
 };

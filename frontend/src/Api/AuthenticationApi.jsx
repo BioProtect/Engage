@@ -1,67 +1,34 @@
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-async function handleResponse(response) {
+const post = async (path, options) => {
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      ...options,
+    });
+  } catch {
+    throw new Error("Cannot connect to server");
+  }
   if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch {
-      errorData = null;
-    }
-
-    let errorMessage = errorData?.msg || response.statusText || "API Error";
     if (response.status === 401) {
-      errorMessage = "Username or Password is incorrect";
+      throw new Error("Username or Password is incorrect");
     }
-    throw new Error(errorMessage);
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.msg || response.statusText || "API Error");
   }
   return response.json();
-}
+};
 
-export async function login(username, password) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    return await handleResponse(response);
-  } catch (err) {
-    console.log("err ", err);
-    if (err instanceof TypeError) {
-      throw new Error("Cannot connect to server");
-    }
-    throw err;
-  }
-}
+const credentials = (username, password) => ({
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ username, password }),
+});
 
-export async function signup(username, password) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    return await handleResponse(response);
-  } catch (err) {
-    if (err instanceof TypeError) {
-      throw new Error("Cannot connect to server");
-    }
-    throw err;
-  }
-}
+export const login = (username, password) =>
+  post("/auth", credentials(username, password));
 
-export async function logout() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    return await handleResponse(response);
-  } catch (err) {
-    if (err instanceof TypeError) {
-      throw new Error("Cannot connect to server");
-    }
-    throw err;
-  }
-}
+export const signup = (username, password) =>
+  post("/signup", credentials(username, password));
+
+export const logout = () => post("/logout", { credentials: "include" });

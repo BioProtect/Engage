@@ -21,24 +21,8 @@ const InfoDialog = ({ open, onClose, title, description }) => {
       maxWidth="sm"
       TransitionComponent={Grow}
       transitionDuration={300}
-      BackdropProps={{
-        sx: {
-          backgroundColor: "rgba(0,0,0,0.15)",
-          backdropFilter: "blur(4px)",
-        },
-      }}
       PaperProps={{
-        sx: {
-          m: 2,
-          borderRadius: 3,
-          background: "rgba(235, 242, 255, 0.55)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.6)",
-          boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
-          overflow: "hidden",
-          minWidth: { xs: "80vw", sm: 340 },
-          maxWidth: 400,
-        },
+        sx: { minWidth: { xs: "80vw", sm: 340 }, maxWidth: 400 },
       }}
     >
       <IconButton

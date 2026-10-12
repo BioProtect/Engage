@@ -18,7 +18,7 @@ import Typography from "@mui/material/Typography";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../../Contexts/AuthenticationContext";
-import { useMapContext } from "../../Contexts/MapContext";
+import { useMapStable } from "../../Contexts/MapContext";
 import { useState } from "react";
 
 const AuthForm = ({ onSuccess }) => {
@@ -30,7 +30,7 @@ const AuthForm = ({ onSuccess }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { showSnackbar } = useMapContext();
+  const { showSnackbar } = useMapStable();
 
   const isLogin = tabIndex === 0;
 
@@ -42,8 +42,7 @@ const AuthForm = ({ onSuccess }) => {
 
     try {
       if (isLogin) {
-        const res = await login(username, password);
-        console.log("res ", res);
+        await login(username, password);
         onSuccess?.();
         showSnackbar(username + " has logged in!");
       } else {

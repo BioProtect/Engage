@@ -2,10 +2,10 @@ import React from "react";
 import { IconButton, Tooltip } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
-import { useMapContext } from "../../Contexts/MapContext";
+import { useMapStable } from "../../Contexts/MapContext";
 
 const ExtraMapControls = ({ map }) => {
-  const { showSnackbar } = useMapContext();
+  const { showSnackbar } = useMapStable();
 
   const handleHome = () => {
     if (map) {

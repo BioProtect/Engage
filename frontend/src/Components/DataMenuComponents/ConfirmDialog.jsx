@@ -8,40 +8,17 @@ import {
   Box,
   IconButton,
   Divider,
-  useTheme,
-  useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckIcon from "@mui/icons-material/Check";
 
 const ConfirmDialog = ({ open, onClose, title, description, onConfirm }) => {
-  const theme = useTheme();
-  const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
-
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      BackdropProps={{
-        sx: {
-          backgroundColor: "rgba(0,0,0,0.15)",
-          backdropFilter: "blur(4px)",
-        },
-      }}
-      PaperProps={{
-        sx: {
-          background: "rgba(235, 242, 255, 0.55)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.6)",
-          borderRadius: 3,
-          boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
-          minWidth: isSmall ? "80vw" : 360,
-          maxWidth: 400,
-          p: 0,
-          overflow: "hidden",
-        },
-      }}
+      PaperProps={{ sx: { minWidth: { xs: "80vw", sm: 360 }, maxWidth: 400 } }}
     >
       <IconButton
         onClick={onClose}

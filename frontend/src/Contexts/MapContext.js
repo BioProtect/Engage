@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -9,13 +10,14 @@ import React, {
 import SuccessSnackbar from "../Components/DataMenuComponents/SnackBar";
 
 const MapContext = createContext();
+// Setters, refs and the map itself: none of these change after start-up, so a
+// component that only needs them does not re-render when drawing state does.
+const MapStableContext = createContext();
 
 export const MapProvider = ({ children }) => {
   const [map, setMap] = useState(null);
   const [vectorSource, setVectorSource] = useState(null);
-  const [geoTiffLayer, setGeoTiffLayer] = useState(null);
 
-  const drawRef = useRef(null);
   const selectRef = useRef(null);
   const [drawnFeatures, setDrawnFeatures] = useState([]);
 
@@ -39,12 +41,10 @@ export const MapProvider = ({ children }) => {
   const drawnFeaturesRef = useRef(drawnFeatures);
   const selectedFeatureRef = useRef(selectedFeature);
   const vectorSourceRef = useRef(vectorSource);
-  const visibilityMapRef = useRef(visibilityMap);
 
   drawnFeaturesRef.current = drawnFeatures;
   selectedFeatureRef.current = selectedFeature;
   vectorSourceRef.current = vectorSource;
-  visibilityMapRef.current = visibilityMap;
 
   const showSnackbar = useCallback((msg, severity = "success") => {
     setSnackbarOpen(false);
@@ -84,58 +84,70 @@ export const MapProvider = ({ children }) => {
     });
   }, []);
 
-  const handleCheckboxSelection = useCallback(
-    (id) => {
-      const currentlyVisible = visibilityMapRef.current[id] === true;
-      handleCheckboxChange(id, !currentlyVisible);
-    },
-    [handleCheckboxChange],
+  const stable = useMemo(
+    () => ({
+      map,
+      setMap,
+      vectorSource,
+      setVectorSource,
+      selectRef,
+      drawnFeaturesRef,
+      setDrawnFeatures,
+      setActiveDrawingRow,
+      handleCheckboxChange,
+      setActiveColor,
+      setActiveName,
+      setActiveEunisCode,
+      setActiveFeatureType,
+      setSelectedFeature,
+      showSnackbar,
+      setShowLabels,
+    }),
+    [map, vectorSource, handleCheckboxChange, showSnackbar],
   );
 
   return (
-    <MapContext.Provider
-      value={{
-        map,
-        setMap,
-        vectorSource,
-        setVectorSource,
-        geoTiffLayer,
-        setGeoTiffLayer,
-        drawRef,
-        selectRef,
-        drawnFeatures,
-        setDrawnFeatures,
-        activeDrawingRow,
-        setActiveDrawingRow,
-        visibilityMap,
-        setVisibilityMap,
-        handleCheckboxSelection,
-        handleCheckboxChange,
-        activeColor,
-        setActiveColor,
-        activeName,
-        setActiveName,
-        activeEunisCode,
-        setActiveEunisCode,
-        activeFeatureType,
-        setActiveFeatureType,
-        selectedFeature,
-        setSelectedFeature,
-        showSnackbar,
-        showLabels,
-        setShowLabels,
-      }}
-    >
-      {children}
-      <SuccessSnackbar
-        key={snackbarKey}
-        open={snackbarOpen}
-        message={snackbarMessage}
-        severity={snackbarSeverity}
-        onClose={closeSnackbar}
-      />
-    </MapContext.Provider>
+    <MapStableContext.Provider value={stable}>
+      <MapContext.Provider
+        value={{
+          map,
+          setMap,
+          vectorSource,
+          setVectorSource,
+          selectRef,
+          drawnFeatures,
+          setDrawnFeatures,
+          activeDrawingRow,
+          setActiveDrawingRow,
+          visibilityMap,
+          handleCheckboxChange,
+          activeColor,
+          setActiveColor,
+          activeName,
+          setActiveName,
+          activeEunisCode,
+          setActiveEunisCode,
+          activeFeatureType,
+          setActiveFeatureType,
+          selectedFeature,
+          setSelectedFeature,
+          showSnackbar,
+          showLabels,
+          setShowLabels,
+        }}
+      >
+        {children}
+        <SuccessSnackbar
+          key={snackbarKey}
+          open={snackbarOpen}
+          message={snackbarMessage}
+          severity={snackbarSeverity}
+          onClose={closeSnackbar}
+        />
+      </MapContext.Provider>
+    </MapStableContext.Provider>
   );
 };
 
 export const useMapContext = () => useContext(MapContext);
+export const useMapStable = () => useContext(MapStableContext);
