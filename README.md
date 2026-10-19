@@ -38,7 +38,7 @@ By making marine planning tools more accessible, BioProtect Engage helps ensure 
     ```
 3.  Configure environment variables:
 
-- Create a `.env` file in the project root and configure server endpoints, Mapbox/TileServer tokens, and other environment variables as required.
+- Create a `.env` file in the project root and configure server endpoints, tile server URLs, and other environment variables as required.
 
 4. Run the development server:
    `npm start`

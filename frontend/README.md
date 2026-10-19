@@ -10,7 +10,6 @@ at startup, so restart it after a change.
 
 | Variable | Value |
 | --- | --- |
-| `REACT_APP_MAPBOX_TOKEN` | Mapbox public (`pk.`) token for the basemap |
 | `REACT_APP_API_BASE_URL` | BioProtect server, including `/server` (dev: `http://localhost:8080/server`) |
 | `REACT_APP_MARTIN_BASE_URL` | Martin tile server (dev: `http://localhost:3000`) |
 
