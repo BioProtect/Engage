@@ -1,7 +1,7 @@
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useEffect,
   useState,
 } from 'react'
@@ -89,7 +89,7 @@ export function AuthProvider({ children }) {
   const isAuthenticated = !!token && !!user
 
   return (
-    <AuthContext.Provider
+    <AuthContext
       value={{
         isAuthenticated,
         login,
@@ -100,8 +100,8 @@ export function AuthProvider({ children }) {
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </AuthContext>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => use(AuthContext)

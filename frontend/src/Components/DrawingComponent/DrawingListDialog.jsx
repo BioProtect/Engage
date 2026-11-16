@@ -8,6 +8,7 @@ import {
   Popper,
   Typography,
 } from '@mui/material'
+import { getUid } from 'ol/util'
 import { useMapContext } from '../../Contexts/MapContext'
 import { createFeatureStyle } from './FeatureStyle'
 
@@ -180,7 +181,7 @@ function DrawingDropdown({ anchorEl, open, onClose, row, drawings }) {
                       const isSelected = f === selectRef.current?.getFeatures().getArray()[0]
                       return (
                         <Box
-                          key={f.ol_uid || idx}
+                          key={getUid(f)}
                           onClick={() => handleGoToDrawing(f)}
                           sx={{
                             'display': 'flex',
@@ -244,7 +245,10 @@ function DrawingDropdown({ anchorEl, open, onClose, row, drawings }) {
                           >
                             <IconButton
                               size="small"
-                              onClick={(e) => { e.stopPropagation(); handleGoToDrawing(f) }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleGoToDrawing(f)
+                              }}
                               sx={{
                                 'p': 0.5,
                                 'borderRadius': 1.5,
@@ -258,7 +262,10 @@ function DrawingDropdown({ anchorEl, open, onClose, row, drawings }) {
 
                             <IconButton
                               size="small"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteDrawing(f) }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteDrawing(f)
+                              }}
                               sx={{
                                 'p': 0.5,
                                 'borderRadius': 1.5,

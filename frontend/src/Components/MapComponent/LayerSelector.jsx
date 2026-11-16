@@ -32,7 +32,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { Fill, Stroke, Style } from 'ol/style'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   get_activity_layers,
   get_feature_layers,
@@ -102,22 +102,21 @@ function LayerSelector({ mapInstance }) {
   const popperRef = useRef(null)
   const buttonRef = useRef(null)
 
-  // Layer state — each section is an array of { name, layer, date } objects.
+  // Layer state: each section is an array of { name, layer, date } objects.
   const [featureLayers, setFeatureLayers] = useState([])
   const [activityLayers, setActivityLayers] = useState([])
-  const [puLayerObj, setPuLayerObj] = useState(null)
 
-  // Runs aren't OL layers — toggling one merges its solution hexes into the
+  // Runs aren't OL layers. Toggling one merges its solution hexes into the
   // set used to re-style the project PU layer.
   const [runs, setRuns] = useState([])
-  const [activeRunIds, setActiveRunIds] = useState(new Set())
-  // Map<runId, Set<h3_index>> — cached so we don't refetch on toggle off/on.
-  const runResultsCache = useRef(new Map())
+  const [activeRunIds, setActiveRunIds] = useState(() => new Set())
+  // Map<runId, Set<h3_index>>, cached so toggling off and on doesn't refetch.
+  const runResultsCacheRef = useRef(new Map())
   // Bump to retrigger the styling effect when a fetch completes.
   const [runResultsVersion, setRunResultsVersion] = useState(0)
 
   // Visibility selection: ids of the layers switched on.
-  const [activeLayers, setActiveLayers] = useState(new Set())
+  const [activeLayers, setActiveLayers] = useState(() => new Set())
 
   // Controls
   const [searchQuery, setSearchQuery] = useState('')
@@ -127,6 +126,23 @@ function LayerSelector({ mapInstance }) {
   const projectId = project?.id ?? null
   const puTilesetId = project?.pu_tilesetid ?? null
   const puAlias = project?.pu_alias ?? 'Planning Units'
+
+  // The project planning-unit layer object; the effect below puts it on the map.
+  const puLayerObj = useMemo(
+    () => (puTilesetId
+      ? createMartinLayer(puTilesetId, puAlias, 'grid_tiles')
+      : null),
+    [puTilesetId, puAlias],
+  )
+
+  // Switching project drops the old project's runs and selection (adjusted
+  // during render, not in an effect).
+  const [runsProjectId, setRunsProjectId] = useState(projectId)
+  if (projectId !== runsProjectId) {
+    setRunsProjectId(projectId)
+    setRuns([])
+    setActiveRunIds(new Set())
+  }
 
   // Flat list used for the toggle-all action and the toggleLayer name lookup.
   const allLayers = useMemo(() => {
@@ -141,7 +157,7 @@ function LayerSelector({ mapInstance }) {
   }, [puLayerObj, featureLayers, activityLayers])
 
   // Apply the shared search/sort controls to a layer list ({name,layer}).
-  const applyLayerControls = (list) => {
+  const applyLayerControls = useCallback((list) => {
     let filtered = list
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -167,7 +183,7 @@ function LayerSelector({ mapInstance }) {
           return a.name.localeCompare(b.name)
       }
     })
-  }
+  }, [searchQuery, sortOption, activeLayers])
 
   // Features section: base layers + project PU layer + saved features.
   const featuresDisplayed = useMemo(() => {
@@ -176,24 +192,11 @@ function LayerSelector({ mapInstance }) {
       items.push(puLayerObj)
     items.push(...featureLayers)
     return applyLayerControls(items)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    puLayerObj,
-    featureLayers,
-    searchQuery,
-    sortOption,
-    activeLayers,
-  ])
+  }, [puLayerObj, featureLayers, applyLayerControls])
 
   const activitiesDisplayed = useMemo(
     () => applyLayerControls(activityLayers),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      activityLayers,
-      searchQuery,
-      sortOption,
-      activeLayers,
-    ],
+    [activityLayers, applyLayerControls],
   )
 
   const runsDisplayed = useMemo(() => {
@@ -279,28 +282,19 @@ function LayerSelector({ mapInstance }) {
 
   // Project planning-unit layer
   useEffect(() => {
-    if (!mapInstance || !puTilesetId) {
-      setPuLayerObj(null)
+    if (!mapInstance || !puLayerObj)
       return
-    }
-
-    const obj = createMartinLayer(puTilesetId, puAlias, 'grid_tiles')
-    mapInstance.addLayer(obj.layer)
-    setPuLayerObj(obj)
-
+    mapInstance.addLayer(puLayerObj.layer)
     return () => {
-      mapInstance.removeLayer(obj.layer)
+      mapInstance.removeLayer(puLayerObj.layer)
     }
-  }, [mapInstance, puTilesetId, puAlias])
+  }, [mapInstance, puLayerObj])
 
   // Prioritizr runs for the current project
   useEffect(() => {
-    if (!projectId) {
-      setRuns([])
-      setActiveRunIds(new Set())
-      runResultsCache.current = new Map()
+    runResultsCacheRef.current = new Map()
+    if (!projectId)
       return
-    }
     get_prioritizr_runs(projectId)
       .then(runsData => setRuns(runsData || []))
       .catch(err => console.error('Failed to load runs:', err))
@@ -313,7 +307,7 @@ function LayerSelector({ mapInstance }) {
 
     const selectedHexes = new Set()
     activeRunIds.forEach((id) => {
-      const cached = runResultsCache.current.get(id)
+      const cached = runResultsCacheRef.current.get(id)
       if (cached)
         cached.forEach(h => selectedHexes.add(h))
     })
@@ -388,7 +382,7 @@ function LayerSelector({ mapInstance }) {
     }
 
     // Fetch + cache results if needed.
-    if (!runResultsCache.current.has(runId)) {
+    if (!runResultsCacheRef.current.has(runId)) {
       try {
         const results = await get_prioritizr_run_results(runId)
         const solutionHexes = new Set(
@@ -396,7 +390,7 @@ function LayerSelector({ mapInstance }) {
             .filter(r => r.solution === 1 || r.solution === true)
             .map(r => r.h3_index),
         )
-        runResultsCache.current.set(runId, solutionHexes)
+        runResultsCacheRef.current.set(runId, solutionHexes)
         setRunResultsVersion(v => v + 1)
       }
       catch (err) {

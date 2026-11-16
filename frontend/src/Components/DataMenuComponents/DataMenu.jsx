@@ -84,21 +84,212 @@ const focusRing = {
   },
 }
 
+// Sheet height: "peek", "half" or "full". Drops to the bar while drawing and
+// returns afterwards (adjusted during render, not in an effect).
+// ponytail: tap-only detents; MUI SwipeableDrawer if people want to drag it.
+function useSheetDetent(activeDrawingRow) {
+  const [detent, setDetent] = useState('half')
+  const [lastOpenDetent, setLastOpenDetent] = useState('half')
+  // Detent to go back to when drawing stops; null while not drawing.
+  const [detentBeforeDrawing, setDetentBeforeDrawing] = useState(null)
+  const [prevRow, setPrevRow] = useState(activeDrawingRow)
+
+  if (detent !== 'peek' && detent !== lastOpenDetent)
+    setLastOpenDetent(detent)
+
+  if (activeDrawingRow !== prevRow) {
+    setPrevRow(activeDrawingRow)
+    if (activeDrawingRow) {
+      if (detentBeforeDrawing === null)
+        setDetentBeforeDrawing(lastOpenDetent)
+      setDetent('peek')
+    }
+    else if (detentBeforeDrawing !== null) {
+      setDetent(detentBeforeDrawing)
+      setDetentBeforeDrawing(null)
+    }
+  }
+  return { detent, setDetent, lastOpenDetent }
+}
+
+// Row ids in the order they were last picked for drawing, newest first.
+function useRecentIds(activeDrawingRow) {
+  const [recentIds, setRecentIds] = useState([])
+  const [prevRow, setPrevRow] = useState(activeDrawingRow)
+  if (activeDrawingRow !== prevRow) {
+    setPrevRow(activeDrawingRow)
+    if (activeDrawingRow) {
+      setRecentIds(prev => [
+        activeDrawingRow,
+        ...prev.filter(id => id !== activeDrawingRow),
+      ])
+    }
+  }
+  return [recentIds, setRecentIds]
+}
+
+// Rows never drawn with keep their place after the ones that were.
+function sortRows(rows, sortOption, drawingCounts, recentIds) {
+  const recency = (id) => {
+    const index = recentIds.indexOf(id)
+    return index === -1
+      ? recentIds.length
+      : index
+  }
+  const compare = {
+    Name: (a, b) => a.name.localeCompare(b.name),
+    Drawings: (a, b) => (drawingCounts[b.id] || 0) - (drawingCounts[a.id] || 0),
+    Recent: (a, b) => recency(a.id) - recency(b.id),
+  }[sortOption]
+  return compare
+    ? [...rows].sort(compare)
+    : rows
+}
+
+// Bar title: the row being drawn, or the app name when not drawing.
+function SheetTitle({ drawingName, drawingColor }) {
+  if (!drawingName) {
+    return (
+      <>
+        <img
+          width="28"
+          height="28"
+          src={BioProtectLogo}
+          alt=""
+          style={{ objectFit: 'contain', flex: 'none' }}
+        />
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontFamily: t => t.typography.headingFont,
+            fontSize: 19,
+            color: 'primary.main',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          BioProtect Engage
+        </Box>
+      </>
+    )
+  }
+  return (
+    <>
+      <Box
+        sx={{
+          width: 26,
+          height: 26,
+          flex: 'none',
+          borderRadius: '8px',
+          bgcolor: drawingColor,
+          boxShadow:
+            'inset 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 0 1px rgba(9,27,53,0.18)',
+        }}
+      />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box
+          sx={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            color: 'text.secondary',
+          }}
+        >
+          Drawing
+        </Box>
+        <Box
+          sx={{
+            fontSize: 13,
+            fontWeight: 700,
+            lineHeight: 1.25,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}
+        >
+          {drawingName}
+        </Box>
+      </Box>
+    </>
+  )
+}
+
+// Footer on/off icon button (select all drawings, show labels).
+function FooterToggle({ pressed, label, title, onIcon: OnIcon, offIcon: OffIcon, onClick }) {
+  const Icon = pressed ? OnIcon : OffIcon
+  return (
+    <Tooltip title={title}>
+      <IconButton
+        aria-label={label}
+        aria-pressed={pressed}
+        onClick={onClick}
+        sx={{
+          ...iconButtonSx,
+          color: pressed ? 'primary.main' : 'text.secondary',
+        }}
+      >
+        <Icon sx={{ fontSize: 20 }} />
+      </IconButton>
+    </Tooltip>
+  )
+}
+
+// Shown when the list is empty: an Add button on an empty Activities tab,
+// otherwise "No results" for a search that matched nothing.
+function EmptyList({ noActivities, canAdd, onAdd }) {
+  if (noActivities) {
+    return (
+      <Box
+        sx={{
+          py: 3,
+          px: 2,
+          textAlign: 'center',
+          color: 'text.secondary',
+          fontWeight: 600,
+          userSelect: 'none',
+        }}
+      >
+        <Box sx={{ mb: 1.5 }}>No activities yet</Box>
+        <Button
+          variant="contained"
+          disableElevation
+          startIcon={<AddIcon />}
+          disabled={!canAdd}
+          onClick={onAdd}
+          sx={addButtonSx}
+        >
+          Add activity
+        </Button>
+      </Box>
+    )
+  }
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 1,
+        py: 3,
+        color: 'primary.main',
+        fontWeight: 600,
+        userSelect: 'none',
+      }}
+    >
+      <SearchOffIcon sx={{ fontSize: 24 }} />
+      No results found
+    </Box>
+  )
+}
+
 function DataMenu() {
   const scrollContainerRef = useRef(null)
   const [data, setData] = useState({ Features: FEATURES, Activities: [] })
-  // Row ids in the order they were last picked for drawing, newest first.
-  const [recentIds, setRecentIds] = useState([])
   // { rowId, anchor } while a row's drawings dropdown is open.
   const [drawingsMenu, setDrawingsMenu] = useState(null)
   const [info, setInfo] = useState({ open: false, row: null })
-  // "peek" (bar only), "half" or "full".
-  // ponytail: tap-only detents; MUI SwipeableDrawer is the upgrade path if
-  // people expect to drag the sheet.
-  const [detent, setDetent] = useState('half')
-  const lastOpenDetent = useRef('half')
-  // Detent to go back to when drawing stops; null while not drawing.
-  const detentBeforeDrawing = useRef(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('Features')
   const [sortOption, setSortOption] = useState('Name')
@@ -133,32 +324,8 @@ function DataMenu() {
     setShowLabels,
   } = useMapContext()
 
-  useEffect(() => {
-    if (!activeDrawingRow)
-      return
-    setRecentIds(prev => [
-      activeDrawingRow,
-      ...prev.filter(id => id !== activeDrawingRow),
-    ])
-  }, [activeDrawingRow])
-
-  if (detent !== 'peek')
-    lastOpenDetent.current = detent
-
-  // Get out of the way while drawing: drop to the bar when a row is picked,
-  // and come back to where the sheet was when drawing stops.
-  useEffect(() => {
-    if (activeDrawingRow) {
-      if (detentBeforeDrawing.current === null) {
-        detentBeforeDrawing.current = lastOpenDetent.current
-      }
-      setDetent('peek')
-    }
-    else if (detentBeforeDrawing.current !== null) {
-      setDetent(detentBeforeDrawing.current)
-      detentBeforeDrawing.current = null
-    }
-  }, [activeDrawingRow])
+  const { detent, setDetent, lastOpenDetent } = useSheetDetent(activeDrawingRow)
+  const [recentIds, setRecentIds] = useRecentIds(activeDrawingRow)
 
   // Everything handed to DataRow is stable (useCallback) so the memoised rows
   // only re-render when their own props change.
@@ -278,47 +445,34 @@ function DataMenu() {
     )
   }
 
-  const filteredData = useMemo(() => {
-    // Rows never drawn with keep their place after the ones that were.
-    const recency = (id) => {
-      const index = recentIds.indexOf(id)
-      return index === -1
-        ? recentIds.length
-        : index
-    }
-
-    return data[selectedCategory]
-      .filter(row =>
-        row.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      .sort((a, b) => {
-        switch (sortOption) {
-          case 'Name':
-            return a.name.localeCompare(b.name)
-          case 'Drawings':
-            return (drawingCounts[b.id] || 0) - (drawingCounts[a.id] || 0)
-          case 'Recent':
-            return recency(a.id) - recency(b.id)
-          default:
-            return 0
-        }
-      })
-  }, [
-    data,
-    selectedCategory,
-    searchQuery,
-    drawingCounts,
-    recentIds,
-    sortOption,
-  ])
+  const filteredData = useMemo(
+    () => sortRows(
+      data[selectedCategory].filter(row =>
+        row.name.toLowerCase().includes(searchQuery.toLowerCase())),
+      sortOption,
+      drawingCounts,
+      recentIds,
+    ),
+    [
+      data,
+      selectedCategory,
+      searchQuery,
+      sortOption,
+      drawingCounts,
+      recentIds,
+    ],
+  )
 
   const isPeek = detent === 'peek'
+  const sizeLabel = detent === 'full'
+    ? 'Shorter list'
+    : 'Taller list'
   const showSearch = searchOpen || searchQuery !== ''
   const hasDrawings = drawnFeatures.length > 0
 
   const togglePeek = () => {
     closeDrawings()
-    setDetent(isPeek ? lastOpenDetent.current : 'peek')
+    setDetent(isPeek ? lastOpenDetent : 'peek')
   }
 
   const stopDrawing = () => {
@@ -417,71 +571,10 @@ function DataMenu() {
             ...focusRing,
           }}
         >
-          {activeDrawingRow
-            ? (
-                <>
-                  <Box
-                    sx={{
-                      width: 26,
-                      height: 26,
-                      flex: 'none',
-                      borderRadius: '8px',
-                      bgcolor: activeColor,
-                      boxShadow:
-                    'inset 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 0 1px rgba(9,27,53,0.18)',
-                    }}
-                  />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Box
-                      sx={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.07em',
-                        textTransform: 'uppercase',
-                        color: 'text.secondary',
-                      }}
-                    >
-                      Drawing
-                    </Box>
-                    <Box
-                      sx={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        lineHeight: 1.25,
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {activeName}
-                    </Box>
-                  </Box>
-                </>
-              )
-            : (
-                <>
-                  <img
-                    width="28"
-                    height="28"
-                    src={BioProtectLogo}
-                    alt=""
-                    style={{ objectFit: 'contain', flex: 'none' }}
-                  />
-                  <Box
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                      fontFamily: t => t.typography.headingFont,
-                      fontSize: 19,
-                      color: 'primary.main',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    BioProtect Engage
-                  </Box>
-                </>
-              )}
+          <SheetTitle
+            drawingName={activeDrawingRow ? activeName : null}
+            drawingColor={activeColor}
+          />
           {/* Points the way the sheet will move: it opens upward on phones */}
           <ExpandMoreIcon
             sx={{
@@ -581,14 +674,9 @@ function DataMenu() {
                 </>
               )}
           <SortSelect sortOption={sortOption} onChange={setSortOption} />
-          <Tooltip title={detent === 'full'
-            ? 'Shorter list'
-            : 'Taller list'}
-          >
+          <Tooltip title={sizeLabel}>
             <IconButton
-              aria-label={detent === 'full'
-                ? 'Shorter list'
-                : 'Taller list'}
+              aria-label={sizeLabel}
               onClick={() => setDetent(detent === 'full'
                 ? 'half'
                 : 'full')}
@@ -638,49 +726,13 @@ function DataMenu() {
                   />
                 ))
               )
-            : selectedCategory === 'Activities'
-              && data.Activities.length === 0
-              ? (
-                  <Box
-                    sx={{
-                      py: 3,
-                      px: 2,
-                      textAlign: 'center',
-                      color: 'text.secondary',
-                      fontWeight: 600,
-                      userSelect: 'none',
-                    }}
-                  >
-                    <Box sx={{ mb: 1.5 }}>No activities yet</Box>
-                    <Button
-                      variant="contained"
-                      disableElevation
-                      startIcon={<AddIcon />}
-                      disabled={!isAuthenticated}
-                      onClick={() => setPickerOpen(true)}
-                      sx={addButtonSx}
-                    >
-                      Add activity
-                    </Button>
-                  </Box>
-                )
-              : (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 1,
-                      py: 3,
-                      color: 'primary.main',
-                      fontWeight: 600,
-                      userSelect: 'none',
-                    }}
-                  >
-                    <SearchOffIcon sx={{ fontSize: 24 }} />
-                    No results found
-                  </Box>
-                )}
+            : (
+                <EmptyList
+                  noActivities={selectedCategory === 'Activities' && data.Activities.length === 0}
+                  canAdd={isAuthenticated}
+                  onAdd={() => setPickerOpen(true)}
+                />
+              )}
         </Box>
 
         {/* Footer */}
@@ -695,29 +747,14 @@ function DataMenu() {
             borderColor: hairline,
           }}
         >
-          <Tooltip
-            title={
-              allSelected ? 'Deselect all drawings' : 'Select all drawings'
-            }
-          >
-            <IconButton
-              aria-label="Select all drawings"
-              aria-pressed={allSelected}
-              onClick={handleSelectAllToggle}
-              sx={{
-                ...iconButtonSx,
-                color: allSelected ? 'primary.main' : 'text.secondary',
-              }}
-            >
-              {allSelected
-                ? (
-                    <CheckBoxIcon sx={{ fontSize: 20 }} />
-                  )
-                : (
-                    <CheckBoxOutlineBlankIcon sx={{ fontSize: 20 }} />
-                  )}
-            </IconButton>
-          </Tooltip>
+          <FooterToggle
+            pressed={allSelected}
+            label="Select all drawings"
+            title={allSelected ? 'Deselect all drawings' : 'Select all drawings'}
+            onIcon={CheckBoxIcon}
+            offIcon={CheckBoxOutlineBlankIcon}
+            onClick={handleSelectAllToggle}
+          />
 
           <Tooltip title="Clear all drawings">
             <span>
@@ -737,25 +774,14 @@ function DataMenu() {
             </span>
           </Tooltip>
 
-          <Tooltip title={showLabels ? 'Hide labels' : 'Show labels'}>
-            <IconButton
-              aria-label="Show labels"
-              aria-pressed={showLabels}
-              onClick={() => setShowLabels(!showLabels)}
-              sx={{
-                ...iconButtonSx,
-                color: showLabels ? 'primary.main' : 'text.secondary',
-              }}
-            >
-              {showLabels
-                ? (
-                    <LabelIcon sx={{ fontSize: 20 }} />
-                  )
-                : (
-                    <LabelOffIcon sx={{ fontSize: 20 }} />
-                  )}
-            </IconButton>
-          </Tooltip>
+          <FooterToggle
+            pressed={showLabels}
+            label="Show labels"
+            title={showLabels ? 'Hide labels' : 'Show labels'}
+            onIcon={LabelIcon}
+            offIcon={LabelOffIcon}
+            onClick={() => setShowLabels(!showLabels)}
+          />
 
           <Tooltip
             title={isAuthenticated ? 'Add activity' : 'Sign in to add activities'}

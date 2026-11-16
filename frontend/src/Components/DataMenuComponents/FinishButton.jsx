@@ -18,7 +18,7 @@ import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { save_activity, save_polygon } from '../../Api/DataMenuApi'
 import { useAuth } from '../../Contexts/AuthenticationContext'
 import { useMapContext } from '../../Contexts/MapContext'
@@ -31,14 +31,9 @@ function FinishSessionButton({ onFinish }) {
 
   const [openDialog, setOpenDialog] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [userGroup, setUserGroup] = useState('')
-
-  useEffect(() => {
-    const storedGroup = localStorage.getItem('userGroup')
-    if (storedGroup) {
-      setUserGroup(storedGroup)
-    }
-  }, [])
+  const [userGroup, setUserGroup] = useState(
+    () => localStorage.getItem('userGroup') || '',
+  )
 
   const clearAllDrawings = () => {
     drawnFeatures.forEach(feature => vectorSource.removeFeature(feature))
@@ -369,7 +364,7 @@ function FinishSessionButton({ onFinish }) {
                       variant="caption"
                       sx={{ color: 'warning.main', fontWeight: 600 }}
                     >
-                      Saving will clear all drawings — this cannot be undone
+                      Saving will clear all drawings. This cannot be undone
                     </Typography>
                   </Box>
                 </DialogContent>
