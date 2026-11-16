@@ -144,7 +144,8 @@ const FinishSessionButton = ({ onFinish }) => {
         }
         startIcon={isAuthenticated ? <CheckIcon /> : <LoginIcon />}
         sx={{
-          ml: "auto",
+          // Last in the footer; DataMenu's Add button takes the auto margin.
+          ml: "6px",
           flex: "none",
           height: 34,
           px: "12px",

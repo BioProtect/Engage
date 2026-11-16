@@ -1,62 +1,70 @@
-import React, { useState } from "react";
+import React from "react";
 
-import IconButton from "@mui/material/IconButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import LogoutIcon from "@mui/icons-material/Logout";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import PersonIcon from "@mui/icons-material/Person";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import { iconButtonSx } from "../../theme";
+import { alpha } from "@mui/material/styles";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { useMapStable } from "../../Contexts/MapContext";
 
-// Account button for the data menu footer; renders nothing when signed out.
+// Signed-in user and Sign out, as its own row under the data menu footer;
+// renders nothing when signed out.
 const UserInfo = () => {
   const { user, logout } = useAuth();
   const { showSnackbar } = useMapStable();
-  const [anchor, setAnchor] = useState(null);
 
   if (!user) return null;
 
   const handleLogout = () => {
-    setAnchor(null);
     logout();
     showSnackbar(user.username + " has logged out!");
   };
 
   return (
-    <>
-      <Tooltip title="Account">
-        <IconButton
-          aria-label={`Account: ${user.username}`}
-          aria-haspopup="menu"
-          onClick={(e) => setAnchor(e.currentTarget)}
-          sx={{ ...iconButtonSx, color: "primary.main" }}
-        >
-          <PersonIcon sx={{ fontSize: 20 }} />
-        </IconButton>
-      </Tooltip>
-      <Menu
-        anchorEl={anchor}
-        open={Boolean(anchor)}
-        onClose={() => setAnchor(null)}
+    <Box
+      sx={{
+        flex: "none",
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        p: "4px 8px 6px 12px",
+        borderTop: "1px solid",
+        borderColor: (t) => alpha(t.palette.primary.main, 0.14),
+      }}
+    >
+      <PersonIcon sx={{ fontSize: 18, color: "primary.main" }} />
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          fontWeight: 700,
+          color: "primary.main",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
       >
-        <Typography
-          sx={{ px: 2, py: 0.75, fontSize: 13, fontWeight: 700 }}
-          color="text.primary"
-        >
-          {user.username}
-        </Typography>
-        <MenuItem onClick={handleLogout} sx={{ fontSize: 13 }}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          Sign out
-        </MenuItem>
-      </Menu>
-    </>
+        {user.username}
+      </Box>
+      <Button
+        size="small"
+        startIcon={<LogoutIcon sx={{ fontSize: 16 }} />}
+        onClick={handleLogout}
+        sx={{
+          flex: "none",
+          height: 30,
+          px: "10px",
+          borderRadius: "8px",
+          fontSize: 12,
+          fontWeight: 700,
+          textTransform: "none",
+          "& .MuiButton-startIcon": { mr: "4px" },
+        }}
+      >
+        Sign out
+      </Button>
+    </Box>
   );
 };
 

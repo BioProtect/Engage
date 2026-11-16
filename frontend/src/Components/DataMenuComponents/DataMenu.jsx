@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ActivityPicker from "./ActivityPicker";
 import AddItemDialog from "./AddItemDialog";
 import BioProtectLogo from "../../images/bioprotect_nobgrnd.png";
+import AddIcon from "@mui/icons-material/Add";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import CategoryTabs from "./CategoryTabs";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
@@ -32,6 +35,7 @@ import { get_drawing_items } from "../../Api/DataMenuApi";
 import { generateColor } from "../../generateColor";
 import { iconButtonSx, sheetSurface } from "../../theme";
 import { useMapContext } from "../../Contexts/MapContext";
+import { useAuth } from "../../Contexts/AuthenticationContext";
 
 const CATEGORIES = ["Features", "Activities"];
 
@@ -46,6 +50,18 @@ const HEIGHTS = {
     xs: "calc(100dvh - 44px)",
     sm: `calc(100dvh - 24px - ${SAFE_TOP})`,
   },
+};
+
+// Primary (blue), just left of the green Finish button, same size and shape.
+const addButtonSx = {
+  flex: "none",
+  height: 34,
+  px: "12px",
+  borderRadius: "9px",
+  fontWeight: 700,
+  fontSize: 13,
+  textTransform: "none",
+  "& .MuiButton-startIcon": { mr: "4px" },
 };
 
 const hairline = (t) => alpha(t.palette.primary.main, 0.14);
@@ -85,6 +101,9 @@ const DataMenu = () => {
     onConfirm: () => {},
   });
   const [allSelected, setAllSelected] = useState(false);
+  // Which add dialog is open: "Activities" (PAD picker), "Features", or null.
+  const [addOpen, setAddOpen] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   const {
     activeDrawingRow,
@@ -95,6 +114,8 @@ const DataMenu = () => {
     setActiveDrawingRow,
     setActiveEunisCode,
     setActiveFeatureType,
+    setActiveColor,
+    setActiveName,
     activeColor,
     activeName,
     visibilityMap,
@@ -241,7 +262,34 @@ const DataMenu = () => {
     showSnackbar(`${item.name} was successfully added!`);
   };
 
+  // A PAD activity from the picker: add it (once) and start drawing it, the
+  // same as tapping its row. Its category stands in for the description.
+  const handlePickActivity = ({ id, activity, category }) => {
+    const row = {
+      id,
+      name: activity,
+      description: category,
+      type: "Activities",
+      color: generateColor(id),
+    };
+    setData((prev) =>
+      prev.Activities.some((r) => r.id === id)
+        ? prev
+        : { ...prev, Activities: [...prev.Activities, row] },
+    );
+    setSelectedCategory("Activities");
+    setActiveDrawingRow(id);
+    setActiveColor(row.color);
+    setActiveName(row.name);
+    setActiveEunisCode(null);
+    setActiveFeatureType("Activities");
+    handleCheckboxChange(id, true);
+  };
+
   const handleFinishSession = () => {
+    // The Activities list is per session: the next group starts empty.
+    setData((prev) => ({ ...prev, Activities: [] }));
+    setRecentIds([]);
     setActiveDrawingRow(null);
     drawnFeatures.forEach((feature) =>
       handleCheckboxChange(feature.get("id"), false),
@@ -617,6 +665,30 @@ const DataMenu = () => {
                 onCloseDrawings={closeDrawings}
               />
             ))
+          ) : selectedCategory === "Activities" &&
+            data.Activities.length === 0 ? (
+            <Box
+              sx={{
+                py: 3,
+                px: 2,
+                textAlign: "center",
+                color: "text.secondary",
+                fontWeight: 600,
+                userSelect: "none",
+              }}
+            >
+              <Box sx={{ mb: 1.5 }}>No activities yet</Box>
+              <Button
+                variant="contained"
+                disableElevation
+                startIcon={<AddIcon />}
+                disabled={!isAuthenticated}
+                onClick={() => setAddOpen("Activities")}
+                sx={addButtonSx}
+              >
+                Add activity
+              </Button>
+            </Box>
           ) : (
             <Box
               sx={{
@@ -670,8 +742,6 @@ const DataMenu = () => {
             </IconButton>
           </Tooltip>
 
-          <AddItemDialog onAdd={handleAddItem} />
-
           <Tooltip title="Clear all drawings">
             <span>
               <IconButton
@@ -709,11 +779,47 @@ const DataMenu = () => {
             </IconButton>
           </Tooltip>
 
-          <UserInfo />
+          <Tooltip
+            title={
+              isAuthenticated
+                ? `Add ${selectedCategory === "Activities" ? "activity" : "feature"}`
+                : "Sign in to add items"
+            }
+          >
+            <span style={{ marginLeft: "auto", display: "flex" }}>
+              <Button
+                variant="contained"
+                disableElevation
+                aria-label={
+                  selectedCategory === "Activities" ? "Add activity" : "Add feature"
+                }
+                startIcon={<AddIcon />}
+                disabled={!isAuthenticated}
+                onClick={() => setAddOpen(selectedCategory)}
+                sx={addButtonSx}
+              >
+                Add
+              </Button>
+            </span>
+          </Tooltip>
 
           <FinishSessionButton onFinish={handleFinishSession} />
         </Box>
+
+        {/* Signed-in user + Sign out, its own row under the buttons */}
+        <UserInfo />
       </Box>
+
+      <ActivityPicker
+        open={addOpen === "Activities"}
+        onClose={() => setAddOpen(null)}
+        onPick={handlePickActivity}
+      />
+      <AddItemDialog
+        open={addOpen === "Features"}
+        onClose={() => setAddOpen(null)}
+        onAdd={handleAddItem}
+      />
 
       <ConfirmDialog
         open={confirmOpen}

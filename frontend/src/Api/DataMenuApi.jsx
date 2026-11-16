@@ -22,7 +22,14 @@ const request = async (path, failMessage, { method, body, token } = {}) => {
 // The item list is bundled with the app, not fetched.
 export const get_drawing_items = () => fallbackData;
 
-export const save_drawing_item = ({ name, description, type }) =>
+// PAD activities, same list as the main app's Add Activity popup.
+// [{ id, category, activity }]; `data` arrives as a JSON string.
+export const get_pad_activities = async () =>
+  JSON.parse(
+    (await request("/getActivities", "Failed to fetch activities")).data,
+  );
+
+export const save_drawing_item =({ name, description, type }) =>
   request("/save_drawing_item", "Failed to save feature", {
     body: { name, description, type },
   });

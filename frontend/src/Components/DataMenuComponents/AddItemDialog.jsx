@@ -10,23 +10,17 @@ import {
   Typography,
   Divider,
   Grow,
-  Tooltip,
   InputAdornment,
   Alert,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import AddIcon from "@mui/icons-material/Add";
-import PhishingIcon from "@mui/icons-material/Phishing";
-import SetMealIcon from "@mui/icons-material/SetMeal";
 import ClearIcon from "@mui/icons-material/Clear";
 import CloseIcon from "@mui/icons-material/Close";
 import NotesIcon from "@mui/icons-material/Notes";
-import CategoryIcon from "@mui/icons-material/Category";
 import AbcIcon from "@mui/icons-material/Abc";
 import { useAuth } from "../../Contexts/AuthenticationContext";
 import { save_drawing_item } from "../../Api/DataMenuApi";
 import { generateColor } from "../../generateColor";
-import { iconButtonSx } from "../../theme";
 
 const MAX_LENGTHS = { Name: 30, description: 200 };
 
@@ -64,14 +58,15 @@ const FieldLabel = ({ icon, text }) => (
   </Box>
 );
 
-const AddNewItem = ({ onAdd }) => {
+// Controlled by DataMenu, which owns the Add button.
+const AddNewItem = ({ open, onClose, onAdd }) => {
   const { isAuthenticated } = useAuth();
 
-  const [showModal, setShowModal] = useState(false);
   const [newItem, setNewItem] = useState({
     Name: "",
     description: "",
-    Category: "",
+    // Features only: activities come from PAD via ActivityPicker.
+    Category: "Features",
   });
   const [errors, setErrors] = useState({
     Name: "",
@@ -139,8 +134,8 @@ const AddNewItem = ({ onAdd }) => {
   };
 
   const handleCancel = () => {
-    setShowModal(false);
-    setNewItem({ Name: "", description: "", Category: "" });
+    onClose();
+    setNewItem({ Name: "", description: "", Category: "Features" });
     setErrors({ Name: "", description: "", Category: "" });
     setApiError("");
   };
@@ -153,23 +148,9 @@ const AddNewItem = ({ onAdd }) => {
     !errors.Category;
 
   return (
-    <div style={{ display: "flex" }}>
-      {/* The span lets the tooltip show while the button is disabled. */}
-      <Tooltip title={isAuthenticated ? "Add item" : "Sign in to add items"}>
-        <span>
-          <IconButton
-            aria-label="Add item"
-            disabled={!isAuthenticated}
-            onClick={() => setShowModal(true)}
-            sx={iconButtonSx}
-          >
-            <AddIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </span>
-      </Tooltip>
-
+    <>
       <Dialog
-        open={showModal}
+        open={open}
         onClose={handleCancel}
         maxWidth="sm"
         TransitionComponent={Grow}
@@ -324,78 +305,6 @@ const AddNewItem = ({ onAdd }) => {
               </Typography>
             </Box>
 
-            <Box>
-              <FieldLabel icon={<CategoryIcon />} text="Category" />
-              <Box
-                sx={{
-                  display: "flex",
-                  background: "rgba(255,255,255,0.25)",
-                  backdropFilter: "blur(8px)",
-                  border: errors.Category
-                    ? "1px solid rgba(244,67,54,0.5)"
-                    : "1px solid rgba(255,255,255,0.45)",
-                  borderRadius: "10px",
-                  p: "4px",
-                  gap: "4px",
-                }}
-              >
-                {[
-                  {
-                    value: "Features",
-                    icon: <SetMealIcon sx={{ fontSize: 16 }} />,
-                  },
-                  {
-                    value: "Activities",
-                    icon: <PhishingIcon sx={{ fontSize: 16 }} />,
-                  },
-                ].map(({ value, icon }) => (
-                  <Box
-                    key={value}
-                    onClick={() => {
-                      setNewItem((prev) => ({ ...prev, Category: value }));
-                      setErrors((prev) => ({ ...prev, Category: "" }));
-                    }}
-                    sx={{
-                      flex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 0.75,
-                      py: 0.85,
-                      borderRadius: "7px",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                      fontSize: "0.82rem",
-                      transition: "all 0.2s ease",
-                      userSelect: "none",
-                      ...(newItem.Category === value
-                        ? {
-                            background: "rgba(25,118,210,0.85)",
-                            color: "#fff",
-                            boxShadow: "0 2px 8px rgba(25,118,210,0.35)",
-                          }
-                        : { color: "rgba(0,0,0,0.5)" }),
-                    }}
-                  >
-                    {icon}
-                    {value}
-                  </Box>
-                ))}
-              </Box>
-              {errors.Category && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "error.main",
-                    mt: 0.4,
-                    ml: 0.5,
-                    display: "block",
-                  }}
-                >
-                  {errors.Category}
-                </Typography>
-              )}
-            </Box>
           </Box>
         </DialogContent>
 
@@ -446,7 +355,7 @@ const AddNewItem = ({ onAdd }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </>
   );
 };
 
