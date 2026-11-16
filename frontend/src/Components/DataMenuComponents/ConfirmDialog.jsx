@@ -1,129 +1,89 @@
-import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  Box,
-  IconButton,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteIcon from "@mui/icons-material/Delete";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import DialogShell from './DialogShell'
 
-const ConfirmDialog = ({ open, onClose, title, description, onConfirm }) => {
-  const theme = useTheme();
-  const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
-
+function ConfirmDialog({ open, onClose, title, description, onConfirm }) {
   return (
-    <Dialog
+    <DialogShell
       open={open}
       onClose={onClose}
-      BackdropProps={{
-        sx: {
-          backgroundColor: "rgba(0,0,0,0.05)",
-          backdropFilter: "blur(2px)",
-        },
-      }}
-      PaperProps={{
-        sx: {
-          backgroundColor: "rgba(255, 255, 255, 0.25)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(255,255,255,0.4)",
-          borderRadius: 2,
-          minWidth: isSmall ? "80vw" : 360,
-          maxWidth: 400,
-          p: 0,
-          position: "relative",
-        },
-      }}
+      icon={<WarningAmberIcon />}
+      tone="error"
+      title={title}
+      actions={(
+        <>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            sx={{
+              'textTransform': 'none',
+              'borderRadius': 2,
+              'borderColor': 'rgba(0,0,0,0.2)',
+              'color': 'text.secondary',
+              'bgcolor': 'rgba(255,255,255,0.4)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.6)',
+                borderColor: 'rgba(0,0,0,0.3)',
+              },
+              'px': 2.5,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onConfirm()
+              onClose()
+            }}
+            variant="contained"
+            startIcon={<CheckIcon />}
+            sx={{
+              'textTransform': 'none',
+              'borderRadius': 2,
+              'background': 'linear-gradient(135deg, #f44336, #ff7043)',
+              'boxShadow': '0 4px 12px rgba(244,67,54,0.35)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #d32f2f, #f44336)',
+                boxShadow: '0 4px 16px rgba(244,67,54,0.5)',
+              },
+              'px': 2.5,
+            }}
+          >
+            Confirm
+          </Button>
+        </>
+      )}
     >
-      <IconButton
-        onClick={onClose}
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          color: "rgba(0,0,0,0.6)",
-        }}
-        size="small"
+      <Typography
+        variant="body2"
+        sx={{ color: 'rgba(0,0,0,0.6)', mb: 2, lineHeight: 1.6 }}
       >
-        <CloseIcon />
-      </IconButton>
-
-      <DialogContent
+        {description}
+      </Typography>
+      <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          pt: 4,
-          px: 3,
-          textAlign: "center",
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          px: 1.5,
+          py: 0.6,
+          borderRadius: 2,
+          bgcolor: 'rgba(244,67,54,0.08)',
+          border: '1px solid rgba(244,67,54,0.2)',
         }}
       >
-        <Box
-          sx={{
-            mb: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            bgcolor: "rgba(25, 118, 210, 0.1)",
-          }}
-        >
-          <WarningAmberIcon sx={{ fontSize: 36, color: "error.main" }} />
-        </Box>
-
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
-          {title}
+        <WarningAmberIcon sx={{ fontSize: 14, color: 'error.main' }} />
+        <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+          This action cannot be undone
         </Typography>
+      </Box>
+    </DialogShell>
+  )
+}
 
-        <Typography variant="body2" sx={{ color: "text.primary", mb: 1.5 }}>
-          {description}
-        </Typography>
-
-        <Typography
-          variant="caption"
-          sx={{ color: "error.main", fontWeight: 500 }}
-        >
-          ⚠ This action cannot be undone
-        </Typography>
-      </DialogContent>
-
-      <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
-        <Button
-          onClick={onClose}
-          variant="contained"
-          color="primary"
-          sx={{ mr: 1, textTransform: "none" }}
-        >
-          Cancel
-        </Button>
-
-        <Button
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-          variant="contained"
-          color="error"
-          startIcon={<DeleteIcon />}
-          sx={{
-            textTransform: "none",
-            bgcolor: "error.main",
-            "&:hover": { bgcolor: "error.dark" },
-          }}
-        >
-          Confirm
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-export default ConfirmDialog;
+export default ConfirmDialog

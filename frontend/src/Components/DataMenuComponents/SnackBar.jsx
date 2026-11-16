@@ -1,19 +1,18 @@
-import React from "react";
-import { Snackbar, Alert } from "@mui/material";
+import { Alert, Snackbar } from '@mui/material'
 
-const SuccessSnackbar = ({ open, message, onClose, severity = "success" }) => {
-  const isError = severity === "error";
-  const bgColor = isError ? "#d32f2f" : "#008000";
+function SuccessSnackbar({ open, message, onClose, severity = 'success' }) {
+  const isError = severity === 'error'
+  const bgColor = isError ? '#d32f2f' : '#008000'
   const boxShadowColor = isError
-    ? "rgba(211, 47, 47, 0.3)"
-    : "rgba(0, 128, 0, 0.3)";
+    ? 'rgba(211, 47, 47, 0.3)'
+    : 'rgba(0, 128, 0, 0.3)'
 
   return (
     <Snackbar
       open={open}
-      autoHideDuration={2000}
+      autoHideDuration={3000}
       onClose={onClose}
-      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       sx={{
         bottom: { xs: 80, sm: 40 },
       }}
@@ -24,7 +23,7 @@ const SuccessSnackbar = ({ open, message, onClose, severity = "success" }) => {
         variant="filled"
         elevation={6}
         sx={{
-          width: "100%",
+          width: '100%',
           borderRadius: 2,
           fontWeight: 600,
           fontSize: 14,
@@ -36,7 +35,7 @@ const SuccessSnackbar = ({ open, message, onClose, severity = "success" }) => {
         {message}
       </Alert>
     </Snackbar>
-  );
-};
+  )
+}
 
-export default SuccessSnackbar;
+export default SuccessSnackbar

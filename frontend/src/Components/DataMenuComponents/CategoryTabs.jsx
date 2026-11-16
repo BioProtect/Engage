@@ -1,55 +1,66 @@
-import { Box } from "@mui/material";
-import PhishingIcon from "@mui/icons-material/Phishing";
-import SetMealIcon from "@mui/icons-material/SetMeal";
+import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
+import { alpha } from '@mui/material/styles'
 
-const CategoryTabs = ({ categories, selectedCategory, onSelect }) => {
-  const categoryIcons = {
-    Features: <SetMealIcon fontSize="small" />,
-    Activities: <PhishingIcon fontSize="small" />,
-  };
-
+// Segmented control: one segment per category, with its item count.
+function CategoryTabs({ categories, selectedCategory, onSelect, counts }) {
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box
+      role="tablist"
+      aria-label="Category"
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        bgcolor: t => alpha(t.palette.primary.main, 0.09),
+        borderRadius: '9px',
+        p: '2px',
+        mr: '4px',
+      }}
+    >
       {categories.map((category) => {
-        const isSelected = selectedCategory === category;
+        const isSelected = selectedCategory === category
         return (
-          <Box
+          <ButtonBase
             key={category}
+            role="tab"
+            aria-selected={isSelected}
             onClick={() => onSelect(category)}
             sx={{
-              padding: "8px 12px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              borderRadius: "4px 4px 0 0",
-              backgroundColor: isSelected ? "#1976d2" : "#f5f5f5",
-              color: isSelected ? "white" : "#1976d2",
-              marginRight: 1,
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              maxWidth: "90px",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              boxShadow: isSelected
-                ? "0 0 8px 3px rgba(25, 118, 210, 0.7)"
-                : "none",
-              transition:
-                "box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease",
-              "&:hover": {
-                backgroundColor: isSelected
-                  ? "#1976d2"
-                  : "rgba(25, 118, 210, 0.1)",
+              'flex': 1,
+              'minWidth': 0,
+              'height': 28,
+              'borderRadius': '7px',
+              'fontFamily': 'inherit',
+              'fontWeight': 600,
+              'fontSize': 12,
+              'whiteSpace': 'nowrap',
+              'color': isSelected ? 'primary.contrastText' : 'primary.main',
+              'bgcolor': isSelected ? 'primary.main' : 'transparent',
+              '&.Mui-focusVisible': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: 1,
               },
             }}
           >
-            {categoryIcons[category]}
-            {category.charAt(0).toUpperCase() + category.slice(1)}
-          </Box>
-        );
+            {category}
+            <Box
+              component="span"
+              sx={{
+                ml: '4px',
+                fontSize: 10,
+                fontWeight: 500,
+                opacity: 0.75,
+              }}
+            >
+              {counts[category]}
+            </Box>
+          </ButtonBase>
+        )
       })}
     </Box>
-  );
-};
+  )
+}
 
-export default CategoryTabs;
+export default CategoryTabs

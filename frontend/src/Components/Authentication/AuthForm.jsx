@@ -1,270 +1,165 @@
-import React, { useState } from "react";
-import {
-  TextField,
-  Button,
-  Box,
-  InputAdornment,
-  IconButton,
-  Alert,
-  Tabs,
-  Tab,
-  Typography,
-} from "@mui/material";
-import { useAuth } from "../../Contexts/AuthenticationContext";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
-import PersonIcon from "@mui/icons-material/Person";
-import LoginIcon from "@mui/icons-material/Login";
-import HowToRegIcon from "@mui/icons-material/HowToReg";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import CloseIcon from "@mui/icons-material/Close";
-import { useMapContext } from "../../Contexts/MapContext";
+import CloseIcon from '@mui/icons-material/Close'
+import LoginIcon from '@mui/icons-material/Login'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardActions from '@mui/material/CardActions'
+import CardContent from '@mui/material/CardContent'
+import CardMedia from '@mui/material/CardMedia'
+import FormControl from '@mui/material/FormControl'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import InputLabel from '@mui/material/InputLabel'
+import OutlinedInput from '@mui/material/OutlinedInput'
+import Typography from '@mui/material/Typography'
+import { useState } from 'react'
+import { useAuth } from '../../Contexts/AuthenticationContext'
+import { useMapStable } from '../../Contexts/MapContext'
+import BioProtectLogo from '../../images/bioprotect_project_logo.jpeg'
 
-const AuthForm = ({ onSuccess }) => {
-  const { login, signup } = useAuth();
-  const [tabIndex, setTabIndex] = useState(0);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const { showSnackbar } = useMapContext();
-
-  const isLogin = tabIndex === 0;
-  const iconBlue = "#2196f3";
+function AuthForm({ onSuccess }) {
+  const { login } = useAuth()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const { showSnackbar } = useMapStable()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
 
     try {
-      if (isLogin) {
-        await login(username, password);
-        onSuccess?.();
-        showSnackbar(username + " has logged in!");
-      } else {
-        await signup(username, password);
-        setSuccess("Sign-up successful! Please log in.");
-        setUsername("");
-        setPassword("");
-        setTabIndex(0);
-        showSnackbar(username + " has signed up , please log in!");
-      }
-    } catch (err) {
-      setError(err.message || "Authentication failed");
+      await login(username, password)
+      onSuccess?.()
+      showSnackbar(`${username} has logged in!`)
     }
-  };
+    catch (err) {
+      setError(err.message || 'Authentication failed')
+    }
+    finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
-    <Box sx={{ width: 320, px: 0, py: 0 }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          mb: 1,
-          color: iconBlue,
-          fontWeight: "bold",
-          fontSize: 24,
-          justifyContent: "center",
-        }}
-      >
-        {isLogin ? (
-          <LoginIcon fontSize="large" />
-        ) : (
-          <HowToRegIcon fontSize="large" />
-        )}
-        <Typography variant="h5" component="h1" sx={{ fontWeight: "bold" }}>
-          {isLogin ? "Login" : "Sign Up"}
-        </Typography>
-      </Box>
-
-      <Tabs
-        value={tabIndex}
-        onChange={(_, newValue) => {
-          setError("");
-          setSuccess("");
-          setUsername("");
-          setPassword("");
-          setTabIndex(newValue);
-        }}
-        centered
-        textColor="primary"
-        indicatorColor="primary"
-        sx={{ mb: 2 }}
-      >
-        <Tab
-          label="Login"
-          icon={<LoginIcon />}
-          iconPosition="start"
-          sx={{ fontWeight: "bold" }}
-        />
-        <Tab
-          label="Sign Up"
-          icon={<HowToRegIcon />}
-          iconPosition="start"
-          sx={{ fontWeight: "bold" }}
-        />
-      </Tabs>
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        {error && (
-          <Alert
-            severity="error"
-            sx={{ backgroundColor: "rgba(255 0 0 / 0.15)" }}
-          >
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert
-            severity="success"
-            sx={{ backgroundColor: "rgba(0 128 0 / 0.15)" }}
-          >
-            {success}
-          </Alert>
-        )}
-
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          <TextField
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoComplete="username"
-            variant="filled"
-            inputProps={isLogin ? {} : { maxLength: 10 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <PersonIcon sx={{ color: iconBlue, fontSize: 26 }} />
-                </InputAdornment>
-              ),
-              endAdornment: username ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="Clear username"
-                    onClick={() => setUsername("")}
-                    size="small"
-                    sx={{ color: "#fff" }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-              disableUnderline: true,
-            }}
-            InputLabelProps={{
-              sx: { color: "#fff", fontWeight: "bold" },
-            }}
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.25)",
-              borderRadius: 1,
-              input: { color: "#fff", fontWeight: "600" },
-              "& .MuiInputAdornment-root svg": { color: iconBlue },
-            }}
-          />
-
-          {/* Character Counter Underneath */}
-          {!isLogin && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: "#ccc",
-                fontWeight: "bold",
-                mt: 0.5,
-                ml: 0.5,
-              }}
-            >
-              {username.length}/10
-            </Typography>
-          )}
-        </Box>
-
-        <TextField
-          label="Password"
-          type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete={isLogin ? "current-password" : "new-password"}
-          variant="filled"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LockOpenIcon sx={{ color: iconBlue, fontSize: 26 }} />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <>
-                {password && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="Clear password"
-                      onClick={() => setPassword("")}
-                      size="small"
-                      sx={{ color: "#fff" }}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                )}
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
-                    onClick={() => setShowPassword((show) => !show)}
-                    edge="end"
-                    size="small"
-                    sx={{ color: iconBlue }}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              </>
-            ),
-            disableUnderline: true,
-          }}
-          InputLabelProps={{
-            sx: { color: "#fff", fontWeight: "bold" },
-          }}
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
+    >
+      {error && (
+        <Alert
+          severity="error"
           sx={{
-            backgroundColor: "rgba(255, 255, 255, 0.25)",
-            borderRadius: 1,
-            input: { color: "#fff", fontWeight: "600" },
-            "& .MuiInputAdornment-root svg": { color: iconBlue },
-          }}
-        />
-
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
-          startIcon={
-            isLogin ? (
-              <LoginIcon sx={{ fontSize: 28, color: "#fff" }} />
-            ) : (
-              <HowToRegIcon sx={{ fontSize: 28, color: "#fff" }} />
-            )
-          }
-          sx={{
-            mt: 1,
-            fontWeight: "bold",
+            'borderRadius': 2,
+            'py': 0.5,
+            'bgcolor': 'rgba(244,67,54,0.08)',
+            'border': '1px solid rgba(244,67,54,0.2)',
+            'color': 'error.main',
+            '& .MuiAlert-icon': { color: 'error.main' },
           }}
         >
-          {isLogin ? "Login" : "Sign Up"}
-        </Button>
-      </Box>
+          {error}
+        </Alert>
+      )}
+      <Card sx={{ maxWidth: 345 }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <CardMedia>
+            <img
+              srcSet={`${BioProtectLogo}`}
+              src={`${BioProtectLogo}`}
+              alt="bioprotect logo"
+              loading="lazy"
+            />
+          </CardMedia>
+        </div>
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography gutterBottom variant="h5" component="div">
+            Login
+          </Typography>
+          <FormControl fullWidth variant="outlined" margin="normal">
+            <InputLabel htmlFor="username">Username</InputLabel>
+            <OutlinedInput
+              label="Username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              fullWidth
+              autoComplete="username"
+              endAdornment={
+                username
+                  ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setUsername('')}
+                          edge="end"
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  : null
+              }
+            />
+          </FormControl>
+          <FormControl fullWidth variant="outlined" margin="normal">
+            <InputLabel htmlFor="password">Password</InputLabel>
+            <OutlinedInput
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              fullWidth
+              autoComplete="current-password"
+              endAdornment={(
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(s => !s)}
+                    edge="end"
+                  >
+                    {showPassword
+                      ? <VisibilityOff />
+                      : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )}
+            />
+          </FormControl>
+        </CardContent>
+        <CardActions sx={{ justifyContent: 'right' }}>
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            disabled={isLoading}
+            startIcon={<LoginIcon />}
+            sx={{
+              'py': 1.1,
+              'borderRadius': 2,
+              'background': 'linear-gradient(135deg, #1976d2, #42a5f5)',
+              'boxShadow': '0 4px 12px rgba(25,118,210,0.35)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #1565c0, #1976d2)',
+                boxShadow: '0 4px 16px rgba(25,118,210,0.5)',
+              },
+              '&:disabled': { background: 'rgba(0,0,0,0.12)' },
+            }}
+          >
+            {isLoading ? 'Please wait...' : 'Login'}
+          </Button>
+        </CardActions>
+      </Card>
     </Box>
-  );
-};
+  )
+}
 
-export default AuthForm;
+export default AuthForm

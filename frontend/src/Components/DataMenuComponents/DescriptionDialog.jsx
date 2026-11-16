@@ -1,120 +1,62 @@
-import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
-  Box,
-  Typography,
-  Divider,
-  Grow,
-} from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
+import InfoIcon from '@mui/icons-material/Info'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import DialogShell from './DialogShell'
 
-const InfoDialog = ({ open, onClose, title, description }) => {
+function InfoDialog({ open, onClose, title, description }) {
   return (
-    <Dialog
+    <DialogShell
       open={open}
       onClose={onClose}
-      maxWidth="sm"
-      TransitionComponent={Grow}
-      transitionDuration={300}
-      BackdropProps={{
-        sx: {
-          backgroundColor: "rgba(0, 0, 0, 0.15)",
-          backdropFilter: "none",
-        },
-      }}
-      PaperProps={{
-        sx: {
-          m: 2,
-          px: 5,
-          py: 4,
-          borderRadius: 4,
-          backdropFilter: "blur(20px)",
-          backgroundColor: "rgba(255, 255, 255, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.35)",
-          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.06)",
-          color: "#111",
-          minWidth: 350,
-        },
-      }}
-    >
-      <DialogTitle sx={{ textAlign: "center", p: 0 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 1,
-          }}
-        >
-          <InfoIcon color="primary" fontSize="large" />
-          <Typography
-            variant="h6"
-            component="span"
-            color="primary"
-            sx={{ fontWeight: "bold" }}
-          >
-            {title}
-          </Typography>
-        </Box>
-      </DialogTitle>
-
-      <Box sx={{ display: "flex", justifyContent: "center" }}>
-        <Divider
-          sx={{
-            width: "40%",
-            my: 2,
-            borderColor: "rgba(0, 0, 0, 0.1)",
-          }}
-        />
-      </Box>
-
-      <DialogContent sx={{ textAlign: "center", px: 1, pt: 0, pb: 2 }}>
-        <DialogContentText
-          component="div"
-          sx={{
-            whiteSpace: "pre-line",
-            fontSize: "1rem",
-            color: "#111",
-          }}
-        >
-          {description}
-        </DialogContentText>
-      </DialogContent>
-
-      <Box sx={{ display: "flex", justifyContent: "center" }}>
-        <Divider
-          sx={{
-            width: "30%",
-            my: 2,
-            borderColor: "rgba(0, 0, 0, 0.08)",
-          }}
-        />
-      </Box>
-
-      <DialogActions sx={{ justifyContent: "center", p: 0 }}>
+      icon={<InfoIcon />}
+      tone="info"
+      title={title}
+      actions={(
         <Button
           onClick={onClose}
           variant="contained"
-          color="primary"
           sx={{
-            borderRadius: 2,
-            boxShadow: "0 4px 14px rgba(25, 118, 210, 0.25)",
-            textTransform: "none",
-            fontWeight: 600,
-            px: 5,
-            py: 1.5,
+            'textTransform': 'none',
+            'borderRadius': 2,
+            'fontWeight': 700,
+            'px': 4,
+            'background': 'linear-gradient(135deg, #1976d2, #42a5f5)',
+            'boxShadow': '0 4px 12px rgba(25,118,210,0.35)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #1565c0, #1976d2)',
+              boxShadow: '0 4px 16px rgba(25,118,210,0.5)',
+            },
           }}
         >
           Close
         </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+      )}
+    >
+      <Box
+        sx={{
+          alignSelf: 'stretch',
+          px: 1.5,
+          py: 1.25,
+          borderRadius: 2,
+          background: 'rgba(255,255,255,0.35)',
+          border: '1px solid rgba(255,255,255,0.55)',
+          minHeight: 48,
+        }}
+      >
+        <Typography
+          sx={{
+            whiteSpace: 'pre-line',
+            fontSize: '0.9rem',
+            color: description ? '#1a1a2e' : 'rgba(0,0,0,0.35)',
+            lineHeight: 1.6,
+          }}
+        >
+          {description || 'No description provided.'}
+        </Typography>
+      </Box>
+    </DialogShell>
+  )
+}
 
-export default InfoDialog;
+export default InfoDialog

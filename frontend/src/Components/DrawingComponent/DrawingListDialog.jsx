@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from "react";
+import CloseIcon from '@mui/icons-material/Close'
+import DeleteIcon from '@mui/icons-material/Delete'
+import MyLocationIcon from '@mui/icons-material/MyLocation'
 import {
   Box,
-  Typography,
-  Paper,
+  Divider,
   IconButton,
   Popper,
-  useTheme,
-} from "@mui/material";
-import MyLocationIcon from "@mui/icons-material/MyLocation";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { useMapContext } from "../../Contexts/MapContext";
-import SuccessSnackbar from "../DataMenuComponents/SnackBar";
-import { createFeatureStyle } from "./FeatureStyle";
+  Typography,
+} from '@mui/material'
+import { useMapContext } from '../../Contexts/MapContext'
+import { createFeatureStyle } from './FeatureStyle'
 
-const DrawingDropdown = ({ anchorEl, open, onClose, row }) => {
+function DrawingDropdown({ anchorEl, open, onClose, row, drawings }) {
   const {
     map,
     selectRef,
@@ -21,66 +19,54 @@ const DrawingDropdown = ({ anchorEl, open, onClose, row }) => {
     vectorSource,
     setDrawnFeatures,
     handleCheckboxChange,
-    rowRefs,
-    drawnFeatures,
-  } = useMapContext();
-
-  const theme = useTheme();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-
-  const handleCloseSnackbar = () => setSnackbarOpen(false);
+    showSnackbar,
+  } = useMapContext()
 
   const handleGoToDrawing = (feature) => {
-    if (!map) return;
-    const geometry = feature.getGeometry();
-    if (!geometry) return;
+    if (!map)
+      return
+    const geometry = feature.getGeometry()
+    if (!geometry)
+      return
 
-    const view = map.getView();
+    const view = map.getView()
     view.fit(geometry.getExtent(), {
       padding: [40, 40, 40, 40],
       duration: 700,
       maxZoom: 6,
-    });
+    })
 
-    setSelectedFeature(feature);
-    selectRef.current?.getFeatures().clear();
-    selectRef.current?.getFeatures().push(feature);
-
-    handleCheckboxChange(row.id, true);
-    rowRefs?.current[row.id]?.scrollIntoView?.({ behavior: "smooth" });
-  };
+    setSelectedFeature(feature)
+    selectRef.current?.getFeatures().clear()
+    selectRef.current?.getFeatures().push(feature)
+    handleCheckboxChange(row.id, true)
+  }
 
   const handleDeleteDrawing = (feature) => {
-    vectorSource.removeFeature(feature);
+    vectorSource.removeFeature(feature)
 
     setDrawnFeatures((prev) => {
-      const updated = prev.filter((f) => f !== feature);
-
+      const updated = prev.filter(f => f !== feature)
       const sameRowFeatures = updated
-        .filter((f) => f.get("id") === row.id)
-        .sort((a, b) => a.get("timestamp") - b.get("timestamp"));
-
+        .filter(f => f.get('id') === row.id)
+        .sort((a, b) => new Date(a.get('timestamp')) - new Date(b.get('timestamp')))
       sameRowFeatures.forEach((f, index) => {
-        f.set("drawingNumber", index + 1);
-        f.setStyle(createFeatureStyle(f, { map, showLabels: true }));
-      });
-
-      return updated;
-    });
+        f.set('drawingNumber', index + 1)
+        f.setStyle(createFeatureStyle(f, { map, showLabels: true }))
+      })
+      return updated
+    })
 
     if (feature === selectRef.current?.getFeatures().getArray()[0]) {
-      selectRef.current?.getFeatures().clear();
-      setSelectedFeature(null);
+      selectRef.current?.getFeatures().clear()
+      setSelectedFeature(null)
     }
 
-    setSnackbarMessage("Drawing deleted");
-    setSnackbarOpen(true);
-  };
+    showSnackbar(`Successfully deleted Drawing ${feature.get('drawingNumber')} of ${row.name}!`)
+  }
 
-  const drawings = drawnFeatures.filter((f) => f.get("id") === row.id);
-
-  if (!open) return null;
+  if (!open)
+    return null
 
   return (
     <>
@@ -88,234 +74,236 @@ const DrawingDropdown = ({ anchorEl, open, onClose, row }) => {
         open={open}
         anchorEl={anchorEl}
         placement="bottom"
-        modifiers={[{ name: "offset", options: { offset: [0, 12] } }]}
+        modifiers={[
+          {
+            name: 'offset',
+            options: {
+              offset: [0, 12],
+            },
+          },
+        ]}
         style={{ zIndex: 1300 }}
       >
-        <Box sx={{ position: "relative", overflow: "visible" }}>
-          {/* Pointer */}
+        <Box sx={{ position: 'relative', overflow: 'visible' }}>
+          {/* Arrow */}
           <Box
             sx={{
-              position: "absolute",
-              top: -10,
-              left: "50%",
-              transform: "translateX(-50%)",
+              position: 'absolute',
+              top: -8,
+              left: '50%',
+              transform: 'translateX(-50%)',
               width: 0,
               height: 0,
-              borderLeft: "10px solid transparent",
-              borderRight: "10px solid transparent",
-              borderBottom: `10px solid #888`,
+              borderLeft: '9px solid transparent',
+              borderRight: '9px solid transparent',
+              borderBottom: '9px solid rgba(255,255,255,0.6)',
               zIndex: 2,
+              filter: 'drop-shadow(0 -2px 2px rgba(0,0,0,0.06))',
             }}
           />
 
-          <Paper
-            elevation={6}
+          <Box
             sx={{
-              width: 280,
-              maxHeight: 360,
-              overflowY: "auto",
+              width: 260,
+              maxHeight: 340,
+              display: 'flex',
+              flexDirection: 'column',
               borderRadius: 3,
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: theme.shadows[5],
-              position: "relative",
-              backgroundColor: theme.palette.background.paper,
+              background: 'rgba(235, 242, 255, 0.55)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.6)',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+              overflow: 'hidden',
             }}
           >
+            {/* Header */}
             <Box
               sx={{
-                position: "sticky",
-                top: 0,
-                zIndex: 2,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                py: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 px: 2,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                backgroundColor: theme.palette.background.paper,
+                py: 1.25,
+                background: 'rgba(255,255,255,0.4)',
+                borderBottom: '1px solid rgba(255,255,255,0.5)',
               }}
             >
-              <Typography
-                variant="subtitle1"
-                fontWeight={700}
-                sx={{ flex: 1, textAlign: "center" }}
+              <Box sx={{ width: 28 }} />
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flex: 1,
+                justifyContent: 'center',
+              }}
               >
-                {row.name}
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={onClose}
-                sx={{
-                  color: theme.palette.text.primary,
-                  "&:hover": { backgroundColor: theme.palette.action.hover },
-                }}
-              >
-                ✕
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    backgroundColor: row.color,
+                    boxShadow: `0 0 6px ${row.color}`,
+                  }}
+                />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#1a1a2e' }}>
+                  {row.name}
+                </Typography>
+              </Box>
+              <IconButton size="small" onClick={onClose} sx={{ color: 'rgba(0,0,0,0.4)', p: '3px' }}>
+                <CloseIcon fontSize="small" />
               </IconButton>
             </Box>
 
-            {drawings.length === 0 && (
-              <Typography
-                variant="body2"
-                sx={{
-                  p: 2,
-                  textAlign: "center",
-                  color: theme.palette.text.secondary,
-                }}
-              >
-                No drawings available
-              </Typography>
-            )}
-
-            {drawings.map((f, idx) => {
-              const isSelected =
-                f === selectRef.current?.getFeatures().getArray()[0];
-
-              return (
-                <Paper
-                  key={f.ol_uid || idx}
-                  elevation={isSelected ? 4 : 1}
-                  sx={{
-                    width: "95%",
-                    margin: "6px auto",
-                    cursor: "pointer",
-                    borderRadius: 2,
-                    backgroundColor: isSelected
-                      ? theme.palette.primary.light
-                      : theme.palette.background.default,
-                    transition: "transform 0.15s, box-shadow 0.15s",
-                  }}
-                  onClick={() => handleGoToDrawing(f)}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      py: 1,
-                      px: 2,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        flex: 1,
-                        gap: 0.25,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        sx={{ color: theme.palette.text.primary }}
-                      >
-                        Drawing {f.get("drawingNumber") || idx + 1}
-                      </Typography>
-
-                      {(f.get("description") ||
-                        f.get("density") !== undefined) && (
+            {/* Drawing list */}
+            <Box
+              sx={{
+                'overflowY': 'auto',
+                'p': 1,
+                'display': 'flex',
+                'flexDirection': 'column',
+                'gap': 0.75,
+                '&::-webkit-scrollbar': { width: 4 },
+                '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                '&::-webkit-scrollbar-thumb': { borderRadius: 10, bgcolor: 'rgba(25,118,210,0.3)' },
+                '&::-webkit-scrollbar-thumb:hover': { bgcolor: 'rgba(25,118,210,0.5)' },
+              }}
+            >
+              {drawings.length === 0
+                ? (
+                    <Typography variant="body2" sx={{ textAlign: 'center', color: 'rgba(0,0,0,0.45)', py: 2 }}>
+                      No drawings yet
+                    </Typography>
+                  )
+                : (
+                    drawings.map((f, idx) => {
+                      const isSelected = f === selectRef.current?.getFeatures().getArray()[0]
+                      return (
                         <Box
+                          key={f.ol_uid || idx}
+                          onClick={() => handleGoToDrawing(f)}
                           sx={{
-                            display: "flex",
-                            justifyContent: "flex-start",
-                            gap: 0.5,
-                            flexWrap: "wrap",
-                            mt: 0.25,
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'justifyContent': 'space-between',
+                            'px': 1.5,
+                            'py': 1,
+                            'borderRadius': 2,
+                            'cursor': 'pointer',
+                            'background': isSelected
+                              ? 'rgba(25,118,210,0.18)'
+                              : 'rgba(255,255,255,0.45)',
+                            'border': isSelected
+                              ? '1px solid rgba(25,118,210,0.35)'
+                              : '1px solid rgba(255,255,255,0.6)',
+                            'transition': 'all 0.15s ease',
+                            '&:hover': { background: 'rgba(25,118,210,0.1)', border: '1px solid rgba(25,118,210,0.2)' },
                           }}
                         >
-                          {f.get("description") && (
-                            <Typography
-                              variant="caption"
-                              sx={{ color: theme.palette.text.secondary }}
-                            >
-                              {f.get("description")}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={600} sx={{ color: '#1a1a2e', fontSize: '0.82rem' }}>
+                              Drawing
+                              {' '}
+                              {f.get('drawingNumber') || idx + 1}
                             </Typography>
-                          )}
 
-                          {f.get("density") !== undefined && (
-                            <Box
-                              component="span"
+                            {f.get('description') && (
+                              <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.5)', display: 'block' }} noWrap>
+                                {f.get('description')}
+                              </Typography>
+                            )}
+
+                            {f.get('density') !== undefined && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: 'inline-block',
+                                  mt: 0.25,
+                                  px: 1,
+                                  py: 0.2,
+                                  borderRadius: 1,
+                                  bgcolor: 'rgba(25,118,210,0.12)',
+                                  color: '#1565c0',
+                                  fontWeight: 600,
+                                  fontSize: '0.62rem',
+                                }}
+                              >
+                                Density:
+                                {' '}
+                                {f.get('density')}
+                              </Box>
+                            )}
+                          </Box>
+
+                          <Box sx={{
+                            display: 'flex',
+                            gap: 0.5,
+                            flexShrink: 0,
+                            ml: 1,
+                          }}
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleGoToDrawing(f) }}
                               sx={{
-                                px: 1.2,
-                                py: 0.3,
-                                borderRadius: 1,
-                                backgroundColor: theme.palette.primary.light,
-                                color: theme.palette.primary.contrastText,
-                                fontWeight: 500,
-                                fontSize: "0.65rem",
+                                'p': 0.5,
+                                'borderRadius': 1.5,
+                                'bgcolor': 'rgba(25,118,210,0.12)',
+                                'color': '#1976d2',
+                                '&:hover': { bgcolor: 'rgba(25,118,210,0.25)' },
                               }}
                             >
-                              Density: {f.get("density")}
-                            </Box>
-                          )}
+                              <MyLocationIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDrawing(f) }}
+                              sx={{
+                                'p': 0.5,
+                                'borderRadius': 1.5,
+                                'bgcolor': 'rgba(244,67,54,0.1)',
+                                'color': '#f44336',
+                                '&:hover': { bgcolor: 'rgba(244,67,54,0.22)' },
+                              }}
+                            >
+                              <DeleteIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Box>
                         </Box>
-                      )}
-                    </Box>
+                      )
+                    })
+                  )}
+            </Box>
 
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 0.5,
-                        flexShrink: 0,
-                        alignItems: "center",
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        sx={{
-                          backgroundColor: theme.palette.primary.main,
-                          color: "#fff",
-                          borderRadius: 1,
-                          p: 0.5,
-                          "&:hover": {
-                            backgroundColor: theme.palette.primary.dark,
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGoToDrawing(f);
-                        }}
-                      >
-                        <MyLocationIcon fontSize="small" />
-                      </IconButton>
-
-                      <IconButton
-                        size="small"
-                        sx={{
-                          backgroundColor: theme.palette.error.main,
-                          color: "#fff",
-                          borderRadius: 1,
-                          p: 0.5,
-                          "&:hover": {
-                            backgroundColor: theme.palette.error.dark,
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDrawing(f);
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </Paper>
-              );
-            })}
-          </Paper>
+            {/* Footer count */}
+            {drawings.length > 0 && (
+              <>
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.5)' }} />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    textAlign: 'center',
+                    py: 0.75,
+                    color: 'rgba(0,0,0,0.4)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {drawings.length}
+                  {' '}
+                  drawing
+                  {drawings.length !== 1
+                    ? 's'
+                    : ''}
+                </Typography>
+              </>
+            )}
+          </Box>
         </Box>
       </Popper>
 
-      <SuccessSnackbar
-        open={snackbarOpen}
-        message={snackbarMessage}
-        onClose={handleCloseSnackbar}
-        severity="success"
-      />
     </>
-  );
-};
+  )
+}
 
-export default DrawingDropdown;
+export default DrawingDropdown

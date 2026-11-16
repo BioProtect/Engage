@@ -1,79 +1,126 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-export async function get_drawing_items() {
-  const response = await fetch(`${API_BASE_URL}/get_drawing_items`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch data");
-  }
-  return response.json();
-}
-
-export async function save_drawing_item({ name, description, type }) {
-  const response = await fetch(`${API_BASE_URL}/save_drawing_item`, {
-    method: "POST",
+// One fetch for every call: JSON body and bearer token when given, and a
+// thrown Error (the server's `error` if it sent one) on a non-2xx response.
+async function request(path, failMessage, { body, token } = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: body ? 'POST' : 'GET',
     headers: {
-      "Content-Type": "application/json",
+      ...(body && { 'Content-Type': 'application/json' }),
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
-    body: JSON.stringify({ name, description, type }),
-  });
-
+    body: body && JSON.stringify(body),
+  })
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to save feature");
+    const errorData = await response.json().catch(() => null)
+    throw new Error(errorData?.error || failMessage)
   }
-
-  return response.json();
+  return response.json()
 }
 
-export async function delete_drawing_item(id) {
-  const response = await fetch(`${API_BASE_URL}/delete_drawing_item/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete item");
-  }
-  return response.json();
+/**
+ * PAD activities, same list as the main app's Add Activity popup.
+ * [{ id, category, activity }]; `data` arrives as a JSON string.
+ */
+export async function get_pad_activities() {
+  return JSON.parse(
+    (await request('/getActivities', 'Failed to fetch activities')).data,
+  )
 }
 
-export async function save_polygon({
+export async function get_feature_layers() {
+  return (
+    await request(
+      '/engage?action=list-features',
+      'Failed to fetch feature layers',
+    )
+  ).features || []
+}
+
+export async function get_activity_layers() {
+  return (
+    await request(
+      '/engage?action=list-activities',
+      'Failed to fetch activity layers',
+    )
+  ).activities || []
+}
+
+/** Runs are not collected via this app, only displayed for visualization. */
+export async function get_prioritizr_runs(projectId) {
+  return projectId == null
+    ? []
+    : (
+        await request(
+          `/prioritizr?action=list-runs&project-id=${projectId}`,
+          'Failed to fetch prioritizr runs',
+        )
+      ).data || []
+}
+
+/**
+ * The (h3_index, solution) pairs for a single run, so the caller can highlight
+ * selected hexes on top of the project planning-unit layer.
+ */
+export async function get_prioritizr_run_results(runId) {
+  return runId == null
+    ? []
+    : (
+        await request(
+          `/prioritizr?action=get-results&run-id=${runId}`,
+          'Failed to fetch run results',
+        )
+      ).data || []
+}
+
+export function save_polygon({
   user,
   userGroup,
   name,
   color,
-  description = "",
-  density = 0,
+  description = '',
+  density = 1,
   timestamp,
   geometry,
+  euniscombd = null,
   token,
 }) {
-  const response = await fetch(`${API_BASE_URL}/save_polygon`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
+  return request('/engage?action=create-feature', 'Failed to save polygon', {
+    token,
+    body: {
       user,
       userGroup,
-      name,
+      name: `${name} - ${userGroup}`,
       color,
       description,
       density,
       timestamp,
       geometry,
-    }),
-  });
+      euniscombd,
+    },
+  })
+}
 
-  if (!response.ok) {
-    console.log("Token:", token);
-    console.log("Headers:", {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    });
-
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to save polygon");
-  }
-
-  return response.json();
+export function save_activity({
+  user,
+  userGroup,
+  name,
+  description = '',
+  density = 1,
+  timestamp,
+  geometry,
+  token,
+}) {
+  return request('/engage?action=create-activity', 'Failed to save activity', {
+    token,
+    body: {
+      user,
+      userGroup,
+      name,
+      description,
+      density,
+      timestamp,
+      geometry,
+    },
+  })
 }
