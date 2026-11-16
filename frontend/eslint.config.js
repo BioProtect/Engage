@@ -17,6 +17,13 @@ export default antfu({
   ],
 }, {
   rules: {
+    // Context files export their provider plus its hook (useAuth, ...).
+    'react-refresh/only-export-components': [
+      'error',
+      {
+        allowExportNames: ['useAuth', 'useMapContext', 'useMapStable'],
+      },
+    ],
     // ponytail: crashes on ESLint 10 ("AST is missing the tokens array"); re-enable once sonarjs supports it
     'sonarjs/no-commented-code': 'off',
     // closures referencing later consts are fine; same-scope (TDZ) uses are still reported

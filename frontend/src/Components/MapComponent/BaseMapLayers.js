@@ -9,7 +9,7 @@ const MARTIN_BASE_URL = import.meta.env.VITE_MARTIN_BASE_URL
 
 export const getTileLayerSource = () => new OSM()
 
-export const infomarBenthicLayer = new TileLayer({
+const infomarBenthicLayer = new TileLayer({
   source: new TileArcGISRest({
     url: 'https://maps.marine.ie/arcgis/rest/services/Infomar/INFOMAR_BroadBenthicHabitats/MapServer',
     params: {

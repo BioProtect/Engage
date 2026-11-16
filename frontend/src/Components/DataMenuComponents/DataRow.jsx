@@ -39,6 +39,98 @@ const focusRing = {
 
 const menuItemSx = { display: 'flex', gap: 1, fontSize: '0.875rem' }
 
+function VisibilityButton({ name, isVisible, isHidden, disabled, onClick }) {
+  const Icon = isHidden ? VisibilityOffIcon : VisibilityIcon
+  return (
+    <IconButton
+      aria-label={`Show ${name} on map`}
+      aria-pressed={isVisible}
+      title={isVisible ? 'Hide on map' : 'Show on map'}
+      disabled={disabled}
+      onClick={onClick}
+      sx={iconButtonSx}
+    >
+      <Icon sx={{ fontSize: 18 }} />
+    </IconButton>
+  )
+}
+
+// Start/stop drawing this row.
+function DrawButton({ name, isActive, onClick }) {
+  return (
+    <ButtonBase
+      onClick={onClick}
+      aria-label={`${isActive ? 'Stop' : 'Start'} drawing ${name}`}
+      title={isActive ? 'Stop Drawing' : 'Start Drawing'}
+      sx={{
+        width: 34,
+        height: 34,
+        flex: 'none',
+        borderRadius: '9px',
+        color: '#fff',
+        bgcolor: isActive ? 'error.main' : 'primary.main',
+        ...focusRing,
+      }}
+    >
+      {isActive
+        ? <StopIcon sx={{ fontSize: 20 }} />
+        : <EditIcon sx={{ fontSize: 18 }} />}
+    </ButtonBase>
+  )
+}
+
+// The row's "more actions" menu. Each item closes the menu, then acts.
+function RowMenu({ id, anchorEl, onClose, canClear, canDelete, onInfo, onClear, onDelete }) {
+  const act = fn => () => {
+    onClose()
+    fn()
+  }
+  return (
+    <Menu
+      id={id}
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          'minWidth': 180,
+          'p': 0.5,
+          '& .MuiMenuItem-root': { borderRadius: 1.5 },
+        },
+      }}
+    >
+      <MenuItem onClick={act(onInfo)} sx={{ ...menuItemSx, color: 'primary.main' }}>
+        <InfoOutlinedIcon fontSize="small" />
+        Show info
+      </MenuItem>
+
+      <MenuItem
+        onClick={act(onClear)}
+        disabled={!canClear}
+        sx={{ ...menuItemSx, color: 'primary.main' }}
+      >
+        <ClearIcon fontSize="small" />
+        Clear All Drawings
+      </MenuItem>
+
+      <Divider sx={{ my: 0.5 }} />
+
+      <Tooltip title={canDelete ? '' : 'Login required to delete'}>
+        <span>
+          <MenuItem
+            onClick={act(onDelete)}
+            disabled={!canDelete}
+            sx={{ ...menuItemSx, color: 'error.main' }}
+          >
+            <DeleteIcon fontSize="small" />
+            {canDelete ? 'Delete' : 'Login to Delete'}
+          </MenuItem>
+        </span>
+      </Tooltip>
+    </Menu>
+  )
+}
+
 function DataRow({
   row,
   featureType,
@@ -176,22 +268,13 @@ function DataRow({
         {row.name}
       </Box>
 
-      <IconButton
-        aria-label={`Show ${row.name} on map`}
-        aria-pressed={isVisible}
-        title={isVisible ? 'Hide on map' : 'Show on map'}
+      <VisibilityButton
+        name={row.name}
+        isVisible={isVisible}
+        isHidden={isHidden}
         disabled={isActive || !hasDrawings}
         onClick={() => handleCheckboxChange(row.id, !isVisible)}
-        sx={iconButtonSx}
-      >
-        {isHidden
-          ? (
-              <VisibilityOffIcon sx={{ fontSize: 18 }} />
-            )
-          : (
-              <VisibilityIcon sx={{ fontSize: 18 }} />
-            )}
-      </IconButton>
+      />
 
       <IconButton
         aria-label={`More actions for ${row.name}`}
@@ -205,95 +288,28 @@ function DataRow({
         <MoreVertIcon sx={{ fontSize: 18 }} />
       </IconButton>
 
-      <Menu
+      <RowMenu
         id={`menu-${row.id}`}
         anchorEl={settingsMenu}
-        open={Boolean(settingsMenu)}
         onClose={handleSettingsMenuClose}
-        PaperProps={{
-          sx: {
-            'minWidth': 180,
-            'p': 0.5,
-            '& .MuiMenuItem-root': { borderRadius: 1.5 },
-          },
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            handleSettingsMenuClose()
-            onShowInfo(row)
-          }}
-          sx={{ ...menuItemSx, color: 'primary.main' }}
-        >
-          <InfoOutlinedIcon fontSize="small" />
-          Show info
-        </MenuItem>
+        canClear={hasDrawings}
+        canDelete={isAuthenticated}
+        onInfo={() => onShowInfo(row)}
+        onClear={() =>
+          onConfirm({
+            title: 'Clear All Drawings',
+            description: `Are you sure you want to clear all drawings for "${row.name}"?`,
+            onConfirm: () => clearRowDrawings(row.id),
+          })}
+        onDelete={() =>
+          onConfirm({
+            title: 'Delete Item',
+            description: `Are you sure you want to delete "${row.name}"?`,
+            onConfirm: handleDeleteRow,
+          })}
+      />
 
-        <MenuItem
-          onClick={() => {
-            handleSettingsMenuClose()
-            onConfirm({
-              title: 'Clear All Drawings',
-              description: `Are you sure you want to clear all drawings for "${row.name}"?`,
-              onConfirm: () => clearRowDrawings(row.id),
-            })
-          }}
-          disabled={!hasDrawings}
-          sx={{ ...menuItemSx, color: 'primary.main' }}
-        >
-          <ClearIcon fontSize="small" />
-          Clear All Drawings
-        </MenuItem>
-
-        <Divider sx={{ my: 0.5 }} />
-
-        <Tooltip title={isAuthenticated ? '' : 'Login required to delete'}>
-          <span>
-            <MenuItem
-              onClick={() => {
-                handleSettingsMenuClose()
-                onConfirm({
-                  title: 'Delete Item',
-                  description: `Are you sure you want to delete "${row.name}"?`,
-                  onConfirm: handleDeleteRow,
-                })
-              }}
-              disabled={!isAuthenticated}
-              sx={{ ...menuItemSx, color: 'error.main' }}
-            >
-              <DeleteIcon fontSize="small" />
-              {isAuthenticated ? 'Delete' : 'Login to Delete'}
-            </MenuItem>
-          </span>
-        </Tooltip>
-      </Menu>
-
-      <ButtonBase
-        onClick={handleSetActive}
-        aria-label={
-          isActive
-            ? `Stop drawing ${row.name}`
-            : `Start drawing ${row.name}`
-        }
-        title={isActive ? 'Stop Drawing' : 'Start Drawing'}
-        sx={{
-          width: 34,
-          height: 34,
-          flex: 'none',
-          borderRadius: '9px',
-          color: '#fff',
-          bgcolor: isActive ? 'error.main' : 'primary.main',
-          ...focusRing,
-        }}
-      >
-        {isActive
-          ? (
-              <StopIcon sx={{ fontSize: 20 }} />
-            )
-          : (
-              <EditIcon sx={{ fontSize: 18 }} />
-            )}
-      </ButtonBase>
+      <DrawButton name={row.name} isActive={isActive} onClick={handleSetActive} />
     </Box>
   )
 }

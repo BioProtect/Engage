@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
 
@@ -13,5 +14,9 @@ export default defineConfig({
   build: {
     // Same folder CRA used, so whatever serves Engage needs no change
     outDir: 'build',
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
   },
 })

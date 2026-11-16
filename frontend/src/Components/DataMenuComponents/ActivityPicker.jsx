@@ -13,7 +13,7 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListSubheader from '@mui/material/ListSubheader'
 import TextField from '@mui/material/TextField'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { get_pad_activities } from '../../Api/DataMenuApi'
 
 // Opened by the Add button on the Activities tab: pick a PAD activity (the names
@@ -39,13 +39,6 @@ function ActivityPicker({ open, onClose, onPick }) {
       setLoading(false)
     }
   }
-
-  // Fetch on first open, and again on reopen after a failure.
-  useEffect(() => {
-    if (open && !activities && !loading)
-      load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
 
   const close = () => {
     onClose()
@@ -78,6 +71,10 @@ function ActivityPicker({ open, onClose, onPick }) {
         open={open}
         onClose={close}
         fullScreen={fullScreen}
+        // Fetch on first open, and again on reopen after a failure.
+        TransitionProps={{
+          onEnter: () => !activities && !loading && load(),
+        }}
         PaperProps={{
           sx: {
             width: { sm: 440 },

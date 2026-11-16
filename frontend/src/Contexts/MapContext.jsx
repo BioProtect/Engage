@@ -1,7 +1,7 @@
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useMemo,
   useRef,
   useState,
@@ -117,8 +117,8 @@ export function MapProvider({ children }) {
   )
 
   return (
-    <MapStableContext.Provider value={stable}>
-      <MapContext.Provider
+    <MapStableContext value={stable}>
+      <MapContext
         value={{
           map,
           setMap,
@@ -154,10 +154,10 @@ export function MapProvider({ children }) {
           severity={snackbarSeverity}
           onClose={closeSnackbar}
         />
-      </MapContext.Provider>
-    </MapStableContext.Provider>
+      </MapContext>
+    </MapStableContext>
   )
 }
 
-export const useMapContext = () => useContext(MapContext)
-export const useMapStable = () => useContext(MapStableContext)
+export const useMapContext = () => use(MapContext)
+export const useMapStable = () => use(MapStableContext)
