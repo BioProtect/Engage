@@ -1,72 +1,76 @@
-import { useEffect, useMemo, useState } from "react";
+import CloseIcon from '@mui/icons-material/Close'
 
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import CloseIcon from "@mui/icons-material/Close";
-import Dialog from "@mui/material/Dialog";
-import IconButton from "@mui/material/IconButton";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListSubheader from "@mui/material/ListSubheader";
-import SearchIcon from "@mui/icons-material/Search";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { get_pad_activities } from "../../Api/DataMenuApi";
+import SearchIcon from '@mui/icons-material/Search'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
+import Dialog from '@mui/material/Dialog'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListSubheader from '@mui/material/ListSubheader'
+import TextField from '@mui/material/TextField'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useEffect, useMemo, useState } from 'react'
+import { get_pad_activities } from '../../Api/DataMenuApi'
 
 // Opened by the Add button on the Activities tab: pick a PAD activity (the names
 // cumulative impact knows) instead of typing one. Fetched live, no bundled
 // fallback, so the names can't drift from PAD.
-const ActivityPicker = ({ open, onClose, onPick }) => {
-  const fullScreen = useMediaQuery((t) => t.breakpoints.down("sm"));
-  const [activities, setActivities] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
+function ActivityPicker({ open, onClose, onPick }) {
+  const fullScreen = useMediaQuery(t => t.breakpoints.down('sm'))
+  const [activities, setActivities] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
 
   const load = async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true)
+    setError('')
     try {
-      setActivities(await get_pad_activities());
-    } catch {
-      setError("Couldn't load activities");
-    } finally {
-      setLoading(false);
+      setActivities(await get_pad_activities())
     }
-  };
+    catch {
+      setError('Couldn\'t load activities')
+    }
+    finally {
+      setLoading(false)
+    }
+  }
 
   // Fetch on first open, and again on reopen after a failure.
   useEffect(() => {
-    if (open && !activities && !loading) load();
+    if (open && !activities && !loading)
+      load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open])
 
   const close = () => {
-    onClose();
-    setQuery("");
-  };
+    onClose()
+    setQuery('')
+  }
 
   // [[category, activities[]], ...] in PAD order, filtered by the search.
   const groups = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase()
     const byCategory = new Map();
     (activities || [])
       .filter(
-        (a) =>
-          !q ||
-          a.activity.toLowerCase().includes(q) ||
-          (a.category || "").toLowerCase().includes(q),
+        a =>
+          !q
+          || a.activity.toLowerCase().includes(q)
+          || (a.category || '').toLowerCase().includes(q),
       )
       .forEach((a) => {
-        const key = a.category || "Other";
-        if (!byCategory.has(key)) byCategory.set(key, []);
-        byCategory.get(key).push(a);
-      });
-    return [...byCategory];
-  }, [activities, query]);
+        const key = a.category || 'Other'
+        if (!byCategory.has(key))
+          byCategory.set(key, [])
+        byCategory.get(key).push(a)
+      })
+    return [...byCategory]
+  }, [activities, query])
 
   return (
     <>
@@ -77,13 +81,13 @@ const ActivityPicker = ({ open, onClose, onPick }) => {
         PaperProps={{
           sx: {
             width: { sm: 440 },
-            height: { sm: "70vh" },
-            display: "flex",
-            flexDirection: "column",
+            height: { sm: '70vh' },
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", p: "12px 12px 8px 16px" }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', p: '12px 12px 8px 16px' }}>
           <Box sx={{ flex: 1, fontWeight: 700, fontSize: 16 }}>
             Choose an activity
           </Box>
@@ -99,7 +103,7 @@ const ActivityPicker = ({ open, onClose, onPick }) => {
             size="small"
             placeholder="Search activities"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -110,58 +114,64 @@ const ActivityPicker = ({ open, onClose, onPick }) => {
           />
         </Box>
 
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress size={22} />
-            </Box>
-          ) : error ? (
-            <Alert
-              severity="error"
-              sx={{ m: 2 }}
-              action={
-                <Button color="inherit" size="small" onClick={load}>
-                  Retry
-                </Button>
-              }
-            >
-              {error}
-            </Alert>
-          ) : groups.length === 0 ? (
-            <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>
-              No activities match
-            </Box>
-          ) : (
-            <List dense disablePadding>
-              {groups.map(([category, items]) => (
-                <li key={category}>
-                  <ul style={{ padding: 0 }}>
-                    <ListSubheader
-                      sx={{ bgcolor: "rgba(235,242,255,0.95)", lineHeight: "32px" }}
-                    >
-                      {category}
-                    </ListSubheader>
-                    {items.map((a) => (
-                      <ListItemButton
-                        key={a.id}
-                        onClick={() => {
-                          onPick(a);
-                          close();
-                        }}
-                        sx={{ fontSize: 13 }}
-                      >
-                        {a.activity}
-                      </ListItemButton>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </List>
-          )}
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          {loading
+            ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={22} />
+                </Box>
+              )
+            : error
+              ? (
+                  <Alert
+                    severity="error"
+                    sx={{ m: 2 }}
+                    action={(
+                      <Button color="inherit" size="small" onClick={load}>
+                        Retry
+                      </Button>
+                    )}
+                  >
+                    {error}
+                  </Alert>
+                )
+              : groups.length === 0
+                ? (
+                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                      No activities match
+                    </Box>
+                  )
+                : (
+                    <List dense disablePadding>
+                      {groups.map(([category, items]) => (
+                        <li key={category}>
+                          <ul style={{ padding: 0 }}>
+                            <ListSubheader
+                              sx={{ bgcolor: 'rgba(235,242,255,0.95)', lineHeight: '32px' }}
+                            >
+                              {category}
+                            </ListSubheader>
+                            {items.map(a => (
+                              <ListItemButton
+                                key={a.id}
+                                onClick={() => {
+                                  onPick(a)
+                                  close()
+                                }}
+                                sx={{ fontSize: 13 }}
+                              >
+                                {a.activity}
+                              </ListItemButton>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </List>
+                  )}
         </Box>
       </Dialog>
     </>
-  );
-};
+  )
+}
 
-export default ActivityPicker;
+export default ActivityPicker

@@ -44,3 +44,6 @@ Thumbs.db
 backend/.venv/
 backend/__pycache__/
 .env
+
+# ESLint cache (npm run lint)
+.eslintcache

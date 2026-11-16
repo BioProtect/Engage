@@ -1,16 +1,16 @@
-import * as olExtent from "ol/extent";
+import * as olExtent from 'ol/extent'
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { DistanceTooltip } from "./DistanceTooltip";
-import PinchWarningSnackbar from "./PinchWarningSnackbar";
-import { createFeatureStyle } from "./FeatureStyle";
-import { useDrawingInteraction } from "./useDrawingInteraction";
-import { useMapContext } from "../../Contexts/MapContext";
-import { usePopupOverlay } from "./usePopupOverlay";
-import { useSelectionInteraction } from "./useSelectionInteraction";
+import { useMapContext } from '../../Contexts/MapContext'
+import { DistanceTooltip } from './DistanceTooltip'
+import { createFeatureStyle } from './FeatureStyle'
+import PinchWarningSnackbar from './PinchWarningSnackbar'
+import { useDrawingInteraction } from './useDrawingInteraction'
+import { usePopupOverlay } from './usePopupOverlay'
+import { useSelectionInteraction } from './useSelectionInteraction'
 
-const DrawingLayer = () => {
+function DrawingLayer() {
   const {
     map,
     vectorSource,
@@ -28,77 +28,79 @@ const DrawingLayer = () => {
     setSelectedFeature,
     showSnackbar,
     showLabels,
-  } = useMapContext();
+  } = useMapContext()
 
-  const colorRef = useRef(activeColor);
-  const idRef = useRef(activeDrawingRow);
-  const nameRef = useRef(activeName);
-  const eunisCombdRef = useRef(activeEunisCode);
-  const featureTypeRef = useRef(activeFeatureType);
+  const colorRef = useRef(activeColor)
+  const idRef = useRef(activeDrawingRow)
+  const nameRef = useRef(activeName)
+  const eunisCombdRef = useRef(activeEunisCode)
+  const featureTypeRef = useRef(activeFeatureType)
   // Mirrors `shouldDraw` so `useDrawingInteraction` can seed the active state
   // of a Draw it rebuilds internally (e.g. after pinch-zoom recovery).
-  const shouldDrawRef = useRef(false);
+  const shouldDrawRef = useRef(false)
 
   useEffect(() => {
-    colorRef.current = activeColor;
-    idRef.current = activeDrawingRow;
-    nameRef.current = activeName;
-    eunisCombdRef.current = activeEunisCode;
-    featureTypeRef.current = activeFeatureType;
+    colorRef.current = activeColor
+    idRef.current = activeDrawingRow
+    nameRef.current = activeName
+    eunisCombdRef.current = activeEunisCode
+    featureTypeRef.current = activeFeatureType
   }, [
     activeColor,
     activeDrawingRow,
     activeName,
     activeEunisCode,
     activeFeatureType,
-  ]);
+  ])
 
-  const [density, setDensity] = useState(1);
-  const [description, setDescription] = useState("");
+  const [density, setDensity] = useState(1)
+  const [description, setDescription] = useState('')
 
   useEffect(() => {
-    if (!selectedFeature) return;
-    setDensity(selectedFeature.get("density") ?? 1);
-    setDescription(selectedFeature.get("description") ?? "");
-  }, [selectedFeature]);
+    if (!selectedFeature)
+      return
+    setDensity(selectedFeature.get('density') ?? 1)
+    setDescription(selectedFeature.get('description') ?? '')
+  }, [selectedFeature])
 
   const handleDelete = useCallback(
     (featureToDelete = selectedFeature) => {
-      if (!featureToDelete || !vectorSource) return;
+      if (!featureToDelete || !vectorSource)
+        return
 
-      const rowId = featureToDelete.get("id");
-      const drawingNumber = featureToDelete.get("drawingNumber");
-      const timestamp = featureToDelete.get("timestamp");
+      const rowId = featureToDelete.get('id')
+      const drawingNumber = featureToDelete.get('drawingNumber')
+      const timestamp = featureToDelete.get('timestamp')
 
-      const matchesFeatureToDelete = (feature) =>
-        feature === featureToDelete ||
-        (feature.get("id") === rowId &&
-          feature.get("drawingNumber") === drawingNumber &&
-          feature.get("timestamp") === timestamp);
+      const matchesFeatureToDelete = feature =>
+        feature === featureToDelete
+        || (feature.get('id') === rowId
+          && feature.get('drawingNumber') === drawingNumber
+          && feature.get('timestamp') === timestamp)
 
-      selectRef.current?.getFeatures().clear();
-      setSelectedFeature(null);
+      selectRef.current?.getFeatures().clear()
+      setSelectedFeature(null)
 
       vectorSource
         .getFeatures()
         .filter(matchesFeatureToDelete)
-        .forEach((feature) => vectorSource.removeFeature(feature));
-      vectorSource.changed();
+        .forEach(feature => vectorSource.removeFeature(feature))
+      vectorSource.changed()
 
       setDrawnFeatures((prev) => {
         const updated = prev.filter(
-          (feature) => !matchesFeatureToDelete(feature),
-        );
+          feature => !matchesFeatureToDelete(feature),
+        )
 
         const featuresForRow = updated
-          .filter((f) => f.get("id") === rowId)
+          .filter(f => f.get('id') === rowId)
           .sort(
             (a, b) =>
-              new Date(a.get("timestamp")) - new Date(b.get("timestamp")),
-          );
+              new Date(a.get('timestamp')) - new Date(b.get('timestamp')),
+          )
 
-        featuresForRow.forEach((f, index) => f.set("drawingNumber", index + 1));
-        featuresForRow.forEach((f) =>
+        featuresForRow.forEach((f, index) => f.set('drawingNumber', index + 1))
+        featuresForRow.forEach(f =>
           f.setStyle(
             createFeatureStyle(f, {
               map,
@@ -106,13 +108,13 @@ const DrawingLayer = () => {
               selected: f === selectedFeature,
             }),
           ),
-        );
+        )
 
-        return updated;
-      });
+        return updated
+      })
 
-      const name = featureToDelete.get("name") || "Unknown";
-      showSnackbar(`Successfully deleted Drawing ${drawingNumber} of ${name}!`);
+      const name = featureToDelete.get('name') || 'Unknown'
+      showSnackbar(`Successfully deleted Drawing ${drawingNumber} of ${name}!`)
     },
     [
       selectedFeature,
@@ -123,7 +125,7 @@ const DrawingLayer = () => {
       showSnackbar,
       map,
     ],
-  );
+  )
 
   const {
     drawRef,
@@ -147,14 +149,14 @@ const DrawingLayer = () => {
     createFeatureStyle,
     showSnackbar,
     shouldDrawRef,
-  });
+  })
 
   useSelectionInteraction({
     map,
     createFeatureStyle,
     setSelectedFeature,
     selectRef,
-  });
+  })
 
   usePopupOverlay({
     map,
@@ -168,61 +170,73 @@ const DrawingLayer = () => {
     visibilityMap,
     activeDrawingRow,
     selectRef,
-  });
+  })
 
-  const prevActiveDrawingRow = useRef(null);
+  const prevActiveDrawingRow = useRef(null)
   useEffect(() => {
-    const currentRow = activeDrawingRow;
-    const previousRow = prevActiveDrawingRow.current;
-    const shouldDraw = !!(activeColor && currentRow);
-    shouldDrawRef.current = shouldDraw;
-    drawRef.current?.setActive(shouldDraw);
+    const currentRow = activeDrawingRow
+    const previousRow = prevActiveDrawingRow.current
+    const shouldDraw = !!(activeColor && currentRow)
+    shouldDrawRef.current = shouldDraw
+    drawRef.current?.setActive(shouldDraw)
 
-    if (shouldDraw && currentRow) handleCheckboxChange(currentRow, true);
+    if (shouldDraw && currentRow) {
+      handleCheckboxChange(currentRow, true)
+    }
     else if (!shouldDraw && previousRow) {
       const hasDrawings = drawnFeatures.some(
-        (feature) => String(feature.get("id")) === String(previousRow),
-      );
-      if (!hasDrawings) handleCheckboxChange(previousRow, false);
+        feature => String(feature.get('id')) === String(previousRow),
+      )
+      if (!hasDrawings)
+        handleCheckboxChange(previousRow, false)
     }
 
-    prevActiveDrawingRow.current = currentRow;
+    prevActiveDrawingRow.current = currentRow
   }, [
     activeDrawingRow,
     activeColor,
     drawnFeatures,
     handleCheckboxChange,
     drawRef,
-  ]);
+  ])
 
   useEffect(() => {
-    if (!map || !selectedFeature) return;
+    if (!map || !selectedFeature)
+      return
 
-    if (drawRef.current?.getActive()) return;
+    if (drawRef.current?.getActive())
+      return
 
-    const geometry = selectedFeature.getGeometry();
-    if (!geometry) return;
+    const geometry = selectedFeature.getGeometry()
+    if (!geometry)
+      return
 
-    const center = olExtent.getCenter(geometry.getExtent());
+    const center = olExtent.getCenter(geometry.getExtent())
     map.getView().animate({
       center,
       duration: 500,
-    });
-  }, [map, selectedFeature, drawRef]);
+    })
+  }, [map, selectedFeature, drawRef])
 
   useEffect(() => {
-    if (!map) return;
+    if (!map)
+      return
 
     drawnFeatures.forEach((feature) => {
-      const selected = feature === selectedFeature;
+      const selected = feature === selectedFeature
       const style = createFeatureStyle(feature, {
         map,
         showLabels,
         selected,
-      });
-      feature.setStyle(style);
-    });
-  }, [drawnFeatures, selectedFeature, showLabels, map]);
+      })
+      feature.setStyle(style)
+    })
+  }, [
+    drawnFeatures,
+    selectedFeature,
+    showLabels,
+    map,
+  ])
 
   return (
     <>
@@ -241,7 +255,7 @@ const DrawingLayer = () => {
         duration={5000}
       />
     </>
-  );
-};
+  )
+}
 
-export default DrawingLayer;
+export default DrawingLayer
