@@ -56,12 +56,16 @@ function DrawingLayer() {
   const [density, setDensity] = useState(1)
   const [description, setDescription] = useState('')
 
-  useEffect(() => {
-    if (!selectedFeature)
-      return
-    setDensity(selectedFeature.get('density') ?? 1)
-    setDescription(selectedFeature.get('description') ?? '')
-  }, [selectedFeature])
+  // Load the popup fields from a newly selected feature. Done during render
+  // (React's "adjust state when a prop changes" pattern), not in an effect.
+  const [loadedFeature, setLoadedFeature] = useState(null)
+  if (selectedFeature !== loadedFeature) {
+    setLoadedFeature(selectedFeature)
+    if (selectedFeature) {
+      setDensity(selectedFeature.get('density') ?? 1)
+      setDescription(selectedFeature.get('description') ?? '')
+    }
+  }
 
   const handleDelete = useCallback(
     (featureToDelete = selectedFeature) => {
@@ -172,10 +176,10 @@ function DrawingLayer() {
     selectRef,
   })
 
-  const prevActiveDrawingRow = useRef(null)
+  const prevActiveDrawingRowRef = useRef(null)
   useEffect(() => {
     const currentRow = activeDrawingRow
-    const previousRow = prevActiveDrawingRow.current
+    const previousRow = prevActiveDrawingRowRef.current
     const shouldDraw = !!(activeColor && currentRow)
     shouldDrawRef.current = shouldDraw
     drawRef.current?.setActive(shouldDraw)
@@ -191,7 +195,7 @@ function DrawingLayer() {
         handleCheckboxChange(previousRow, false)
     }
 
-    prevActiveDrawingRow.current = currentRow
+    prevActiveDrawingRowRef.current = currentRow
   }, [
     activeDrawingRow,
     activeColor,

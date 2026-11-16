@@ -13,7 +13,7 @@ function LocationSearch({ mapInstance }) {
       return false
     const lat = Number.parseFloat(parts[0])
     const lon = Number.parseFloat(parts[1])
-    return !isNaN(lat) && !isNaN(lon)
+    return !Number.isNaN(lat) && !Number.isNaN(lon)
   }
 
   const fetchSuggestions = async (query) => {
@@ -216,13 +216,13 @@ function LocationSearch({ mapInstance }) {
             scrollbarColor: 'rgba(25,118,210,0.3) transparent',
           }}
         >
-          {suggestions.map((s, i) => {
+          {suggestions.map((s) => {
             const flagUrl = s.isCoord
               ? null
               : getFlagUrl(s.address?.country_code)
             return (
               <li
-                key={i}
+                key={s.place_id ?? `${s.lat},${s.lon}`}
                 onClick={() =>
                   handleSelectSuggestion(s.lat, s.lon, s.display_name)}
                 style={{

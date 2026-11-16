@@ -12,7 +12,7 @@ import Map from 'ol/Map.js'
 import { useGeographic } from 'ol/proj.js'
 import VectorSource from 'ol/source/Vector.js'
 import View from 'ol/View.js'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMapStable } from '../../Contexts/MapContext'
 import { availableLayers, getTileLayerSource } from './BaseMapLayers'
 import ExtraMapControls from './ExtraMapControls'
@@ -23,12 +23,15 @@ import 'ol/ol.css'
 
 function MapComponent() {
   useGeographic()
-  const mapRef = useRef(null)
   const zoomRef = useRef(null)
   const { setMap, setVectorSource } = useMapStable()
   const [mapInstance, setMapInstance] = useState(null)
 
-  useEffect(() => {
+  // Callback ref: build the map once its target div mounts. The returned
+  // cleanup (React 19) detaches it again.
+  const mapTargetRef = useCallback((target) => {
+    if (!target)
+      return
     const baseLayer = new TileLayer({
       source: getTileLayerSource(),
     })
@@ -39,7 +42,7 @@ function MapComponent() {
     availableLayers.forEach(layerObj => layerObj.layer.setVisible(false))
 
     const map = new Map({
-      target: mapRef.current,
+      target,
       layers: [
         baseLayer,
         ...availableLayers.map(l => l.layer),
@@ -90,7 +93,7 @@ function MapComponent() {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div
-        ref={mapRef}
+        ref={mapTargetRef}
         style={{
           width: '100%',
           height: '100%',

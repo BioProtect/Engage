@@ -82,11 +82,11 @@ export function useDrawingInteraction({
   const [tooltipCoord, setTooltipCoord] = useState(null)
   const [tooltipText, setTooltipText] = useState('')
   const [isDrawing, setIsDrawing] = useState(false)
-  const pinchActive = useRef(false)
+  const pinchActiveRef = useRef(false)
   const [showPinchWarning, setShowPinchWarning] = useState(false)
   const warningTimeoutRef = useRef(null)
   const stylusActiveRef = useRef(false)
-  const blockedTouchIds = useRef(new Set())
+  const blockedTouchIdsRef = useRef(new Set())
 
   const createDraw = useCallback(() => {
     if (!map || !vectorSource)
@@ -105,9 +105,9 @@ export function useDrawingInteraction({
     })
 
     // Default to inactive on first creation; the parent's activation effect
-    // sets it true when a row+color are picked. On a pinch-zoom rebuild,
-    // however, that effect won't re-fire — so seed from the ref so the new
-    // Draw inherits the user's current intent.
+    // sets it true when a row+color are picked. A pinch-zoom rebuild does not
+    // re-fire that effect, so seed from the ref and the new Draw keeps the
+    // user's current intent.
     draw.setActive(!!shouldDrawRef?.current)
 
     let pointerMoveHandler = null
@@ -223,13 +223,13 @@ export function useDrawingInteraction({
 
       if (evt.pointerType === 'touch') {
         if (stylusActiveRef.current) {
-          blockedTouchIds.current.add(evt.pointerId)
+          blockedTouchIdsRef.current.add(evt.pointerId)
           evt.stopPropagation()
           return
         }
 
         if (!evt.isPrimary && drawRef.current?.getActive()) {
-          pinchActive.current = true
+          pinchActiveRef.current = true
           setShowPinchWarning(true)
           if (warningTimeoutRef.current)
             clearTimeout(warningTimeoutRef.current)
@@ -242,7 +242,7 @@ export function useDrawingInteraction({
     }
 
     const pointerMoveHandler = (evt) => {
-      if (blockedTouchIds.current.has(evt.pointerId)) {
+      if (blockedTouchIdsRef.current.has(evt.pointerId)) {
         evt.stopPropagation()
       }
     }
@@ -253,14 +253,14 @@ export function useDrawingInteraction({
         return
       }
 
-      if (blockedTouchIds.current.has(evt.pointerId)) {
-        blockedTouchIds.current.delete(evt.pointerId)
+      if (blockedTouchIdsRef.current.has(evt.pointerId)) {
+        blockedTouchIdsRef.current.delete(evt.pointerId)
         evt.stopPropagation()
         return
       }
 
-      if (pinchActive.current) {
-        pinchActive.current = false
+      if (pinchActiveRef.current) {
+        pinchActiveRef.current = false
         createDraw()
       }
     }
@@ -268,7 +268,7 @@ export function useDrawingInteraction({
     const pointerCancelHandler = (evt) => {
       if (evt.pointerType === 'stylus')
         stylusActiveRef.current = false
-      blockedTouchIds.current.delete(evt.pointerId)
+      blockedTouchIdsRef.current.delete(evt.pointerId)
     }
 
     const viewport = map.getViewport()
