@@ -1,64 +1,55 @@
-import React, { useEffect, useRef } from "react";
-import ReactDOM from "react-dom/client";
-import Overlay from "ol/Overlay";
+import Overlay from 'ol/Overlay'
+import { useEffect, useRef } from 'react'
 
 const tooltipStyle = {
-  position: "absolute",
-  background: "rgba(30, 144, 255, 0.85)",
-  borderRadius: 6,
-  color: "#fff",
-  padding: "4px 10px",
-  fontSize: 12,
+  position: 'absolute',
+  background: 'rgba(30, 144, 255, 0.85)',
+  borderRadius: '6px',
+  color: '#fff',
+  padding: '4px 10px',
+  fontSize: '12px',
   fontWeight: 500,
-  pointerEvents: "none",
-  transform: "translateY(-100%)",
+  pointerEvents: 'none',
+  transform: 'translateY(-100%)',
   opacity: 0.95,
-  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.3)",
+  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
   lineHeight: 1.2,
   fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif',
-  whiteSpace: "nowrap",
-};
+  whiteSpace: 'nowrap',
+}
 
-export const DistanceTooltip = ({ map, coordinate, text }) => {
-  const overlayRef = useRef(null);
-  const rootRef = useRef(null);
+export function DistanceTooltip({ map, coordinate, text }) {
+  const overlayRef = useRef(null)
 
   useEffect(() => {
-    if (!map || overlayRef.current) return;
+    if (!map)
+      return
 
-    const container = document.createElement("div");
-    Object.assign(container.style, tooltipStyle);
-    const root = ReactDOM.createRoot(container);
+    const container = document.createElement('div')
+    Object.assign(container.style, tooltipStyle)
 
     const overlay = new Overlay({
       element: container,
       offset: [20, -10],
-      positioning: "bottom-left",
+      positioning: 'bottom-left',
       stopEvent: false,
-    });
-
-    map.addOverlay(overlay);
-    overlayRef.current = overlay;
-    rootRef.current = root;
+    })
+    map.addOverlay(overlay)
+    overlayRef.current = overlay
 
     return () => {
-      if (overlayRef.current) {
-        map.removeOverlay(overlayRef.current);
-        overlayRef.current = null;
-      }
-      if (rootRef.current) {
-        rootRef.current.unmount();
-        rootRef.current = null;
-      }
-    };
-  }, [map]);
+      map.removeOverlay(overlay)
+      overlayRef.current = null
+    }
+  }, [map])
 
   useEffect(() => {
-    if (overlayRef.current && rootRef.current && coordinate) {
-      overlayRef.current.setPosition(coordinate);
-      rootRef.current.render(<span>{text}</span>);
-    }
-  }, [coordinate, text]);
+    const overlay = overlayRef.current
+    if (!overlay || !coordinate)
+      return
+    overlay.setPosition(coordinate)
+    overlay.getElement().textContent = text
+  }, [coordinate, text])
 
-  return null;
-};
+  return null
+}

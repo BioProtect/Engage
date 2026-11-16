@@ -1,385 +1,305 @@
-import React, { useState } from "react";
-import EditIcon from "@mui/icons-material/Edit";
-import StopIcon from "@mui/icons-material/Stop";
-import {
-  Checkbox,
-  Paper,
-  Box,
-  Typography,
-  IconButton,
-  Menu,
-  MenuItem,
-  Divider,
-  Tooltip,
-} from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ClearIcon from "@mui/icons-material/Clear";
-import InfoIcon from "@mui/icons-material/Info";
+import ClearIcon from '@mui/icons-material/Clear'
 
-import { useMapContext } from "../../Contexts/MapContext";
-import { useAuth } from "../../Contexts/AuthenticationContext";
-import DescriptionDialog from "../DataMenuComponents/DescriptionDialog";
-import DrawingDropdown from "../DrawingComponent/DrawingListDialog";
-import { delete_drawing_item } from "../../Api/DataMenuApi";
-import ConfirmDialog from "./ConfirmDialog";
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import StopIcon from '@mui/icons-material/Stop'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import { alpha } from '@mui/material/styles'
+import Tooltip from '@mui/material/Tooltip'
+import { memo, useState } from 'react'
+import { useAuth } from '../../Contexts/AuthenticationContext'
+import { useMapStable } from '../../Contexts/MapContext'
+import { iconButtonSx } from '../../theme'
 
-const DataRow = ({
+// Dark or white text, whichever reads better on a "#rrggbb" swatch.
+function textOn(hex) {
+  const channel = i => Number.parseInt(hex.slice(i, i + 2), 16)
+  const luma = channel(1) * 0.299 + channel(3) * 0.587 + channel(5) * 0.114
+  return luma > 150
+    ? '#12222c'
+    : '#fff'
+}
+
+const focusRing = {
+  '&.Mui-focusVisible': {
+    outline: '2px solid',
+    outlineColor: 'primary.main',
+    outlineOffset: 1,
+  },
+}
+
+const menuItemSx = { display: 'flex', gap: 1, fontSize: '0.875rem' }
+
+function DataRow({
   row,
+  featureType,
   deleteRow,
-  openDropdownRowId,
-  setOpenDropdownRowId,
-  dropdownAnchor,
-  setDropdownAnchor,
-}) => {
-  const [settingsMenu, setSettingsMenu] = useState(null);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmProps, setConfirmProps] = useState({
-    title: "",
-    description: "",
-    onConfirm: () => {},
-  });
-
-  const [userOpenedDropdown, setUserOpenedDropdown] = useState(false);
-
-  const openSettings = Boolean(settingsMenu);
-  const openDrawings = openDropdownRowId === row.id && userOpenedDropdown;
+  // This row's slice of the drawing state, worked out once in DataMenu.
+  isActive,
+  isVisible,
+  drawingCount,
+  // The info dialog, confirm dialog and drawings dropdown are single instances
+  // owned by DataMenu; rows only ask for them.
+  onShowInfo,
+  onConfirm,
+  onToggleDrawings,
+  onCloseDrawings,
+}) {
+  const [settingsMenu, setSettingsMenu] = useState(null)
 
   const {
     vectorSource,
-    drawnFeatures,
+    drawnFeaturesRef,
     setDrawnFeatures,
-    activeDrawingRow,
     setSelectedFeature,
     setActiveDrawingRow,
-    visibilityMap,
-    handleCheckboxSelection,
     handleCheckboxChange,
     setActiveColor,
     setActiveName,
+    setActiveEunisCode,
+    setActiveFeatureType,
     showSnackbar,
-  } = useMapContext();
+  } = useMapStable()
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth()
 
-  const rowDrawings =
-    drawnFeatures?.filter((f) => f.get("id") === row.id) || [];
-  const drawingCount = rowDrawings.length;
-  const canToggleCheckbox = drawingCount > 0;
+  const hasDrawings = drawingCount > 0
+  const isHidden = !isVisible && hasDrawings
 
   const clearRowDrawings = (rowId) => {
-    drawnFeatures.forEach((feature) => {
-      if (feature.get("id") === rowId) vectorSource.removeFeature(feature);
-    });
-    if (activeDrawingRow !== rowId) handleCheckboxChange(rowId, false);
-    setSelectedFeature(null);
-    setDrawnFeatures((prev) =>
-      prev.filter((feature) => feature.get("id") !== rowId),
-    );
-    showSnackbar(`Drawings for "${row.name}" have been cleared!`);
-  };
+    drawnFeaturesRef.current.forEach((feature) => {
+      if (feature.get('id') === rowId)
+        vectorSource.removeFeature(feature)
+    })
+    if (!isActive)
+      handleCheckboxChange(rowId, false)
+    setSelectedFeature(null)
+    setDrawnFeatures(prev =>
+      prev.filter(feature => feature.get('id') !== rowId),
+    )
+    showSnackbar(`Drawings for "${row.name}" have been cleared!`)
+  }
 
-  const handleSettingsMenuClick = (event) =>
-    setSettingsMenu(event.currentTarget);
-  const handleSettingsMenuClose = () => setSettingsMenu(null);
+  const handleSettingsMenuClose = () => setSettingsMenu(null)
 
-  const handleDeleteRow = async () => {
-    if (!isAuthenticated) return;
-    try {
-      await delete_drawing_item(row.id);
-      clearRowDrawings(row.id);
-      deleteRow(row.id);
-      showSnackbar(`${row.name} was successfully deleted!`);
-    } catch (err) {
-      console.error("Failed to delete item:", err);
-      showSnackbar(`Failed to delete item: ${err.message}`, "error");
-    }
-    handleSettingsMenuClose();
-  };
+  // The item list is bundled with the app (data/drawingItems), so deleting a
+  // row only removes it from this session; there is nothing to delete on the
+  // server.
+  const handleDeleteRow = () => {
+    if (!isAuthenticated)
+      return
+    if (isActive)
+      setActiveDrawingRow(null)
+    clearRowDrawings(row.id)
+    deleteRow(row.id)
+    showSnackbar(`${row.name} was successfully deleted!`)
+  }
 
   const handleSetActive = () => {
-    if (activeDrawingRow === row.id) {
-      setActiveDrawingRow(null);
-      setOpenDropdownRowId(null);
-      setDropdownAnchor(null);
-    } else {
-      setActiveDrawingRow(row.id);
-      setActiveColor(row.color);
-      setActiveName(row.name);
-      setOpenDropdownRowId(null);
-      setDropdownAnchor(null);
+    if (isActive) {
+      setActiveDrawingRow(null)
+      setActiveEunisCode(null)
+      setActiveFeatureType(null)
     }
-  };
-
-  const handleColorClick = (event) => {
-    if (openDropdownRowId === row.id && userOpenedDropdown) {
-      setOpenDropdownRowId(null);
-      setDropdownAnchor(null);
-      setUserOpenedDropdown(false);
-    } else {
-      setOpenDropdownRowId(row.id);
-      setDropdownAnchor(event.currentTarget);
-      setUserOpenedDropdown(true);
+    else {
+      setActiveDrawingRow(row.id)
+      setActiveColor(row.color)
+      setActiveName(row.name)
+      setActiveEunisCode(row.eunis2022code || null)
+      setActiveFeatureType(featureType || null)
+      // Here rather than only in Draw's effect, so it lands in the same render
+      handleCheckboxChange(row.id, true)
     }
-  };
+    onCloseDrawings()
+  }
 
   return (
-    <>
-      <Paper
-        key={row.id}
-        elevation={1}
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        boxSizing: 'border-box',
+        minHeight: 44,
+        p: '5px 8px 5px 10px',
+        borderBottom: '1px solid',
+        borderColor: t => alpha(t.palette.primary.main, 0.14),
+        bgcolor: isActive
+          ? t => alpha(t.palette.primary.main, 0.1)
+          : 'transparent',
+      }}
+    >
+      {/* Swatch: map colour, drawing count, opens the drawings list */}
+      <ButtonBase
+        onClick={e => onToggleDrawings(row.id, e.currentTarget)}
+        aria-label={`View drawings for ${row.name} (${drawingCount})`}
+        title={hasDrawings ? 'View drawings' : 'No drawings yet'}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: 1.5,
-          marginBottom: 1.5,
-          borderRadius: 2,
-          border:
-            row.id === activeDrawingRow
-              ? "2px solid #64b5f6"
-              : "1px solid rgba(200, 215, 240, 0.7)",
-          backgroundColor:
-            row.id === activeDrawingRow
-              ? "#80d6ff"
-              : "rgba(255, 255, 255, 0.4)",
+          width: 26,
+          height: 26,
+          flex: 'none',
+          borderRadius: '8px',
+          bgcolor: row.color,
+          color: textOn(row.color),
+          fontFamily: 'inherit',
+          fontSize: 11,
+          fontWeight: 700,
           boxShadow:
-            row.id === activeDrawingRow
-              ? "0 0 15px rgba(66, 165, 245, 0.9)"
-              : "0 1px 4px rgba(100, 130, 180, 0.1)",
+            'inset 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 0 1px rgba(9,27,53,0.18)',
+          ...focusRing,
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.25,
-            flex: 1,
-            minWidth: 0,
+        {hasDrawings ? drawingCount : ''}
+      </ButtonBase>
+
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          ml: '6px',
+          fontSize: 13,
+          fontWeight: 600,
+          lineHeight: 1.3,
+          overflowWrap: 'anywhere',
+          color: isHidden ? 'text.secondary' : 'text.primary',
+        }}
+      >
+        {row.name}
+      </Box>
+
+      <IconButton
+        aria-label={`Show ${row.name} on map`}
+        aria-pressed={isVisible}
+        title={isVisible ? 'Hide on map' : 'Show on map'}
+        disabled={isActive || !hasDrawings}
+        onClick={() => handleCheckboxChange(row.id, !isVisible)}
+        sx={iconButtonSx}
+      >
+        {isHidden
+          ? (
+              <VisibilityOffIcon sx={{ fontSize: 18 }} />
+            )
+          : (
+              <VisibilityIcon sx={{ fontSize: 18 }} />
+            )}
+      </IconButton>
+
+      <IconButton
+        aria-label={`More actions for ${row.name}`}
+        aria-controls={settingsMenu
+          ? `menu-${row.id}`
+          : undefined}
+        aria-haspopup="menu"
+        onClick={e => setSettingsMenu(e.currentTarget)}
+        sx={iconButtonSx}
+      >
+        <MoreVertIcon sx={{ fontSize: 18 }} />
+      </IconButton>
+
+      <Menu
+        id={`menu-${row.id}`}
+        anchorEl={settingsMenu}
+        open={Boolean(settingsMenu)}
+        onClose={handleSettingsMenuClose}
+        PaperProps={{
+          sx: {
+            'minWidth': 180,
+            'p': 0.5,
+            '& .MuiMenuItem-root': { borderRadius: 1.5 },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleSettingsMenuClose()
+            onShowInfo(row)
           }}
+          sx={{ ...menuItemSx, color: 'primary.main' }}
         >
-          {/* Settings + Checkbox grouped tightly */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0,
-              flexShrink: 0,
-            }}
-          >
-            <IconButton
-              aria-label="more"
-              aria-controls={`menu-${row.id}`}
-              aria-haspopup="true"
-              onClick={handleSettingsMenuClick}
-              size="small"
-              sx={{ p: "2px" }}
-            >
-              <MoreVertIcon fontSize="small" />
-            </IconButton>
+          <InfoOutlinedIcon fontSize="small" />
+          Show info
+        </MenuItem>
 
-            <Checkbox
-              checked={visibilityMap[row.id] === true}
-              onChange={() => handleCheckboxSelection(row.id)}
-              size="small"
-              disabled={row.id === activeDrawingRow || !canToggleCheckbox}
-              sx={{ p: "2px" }}
-            />
-          </Box>
+        <MenuItem
+          onClick={() => {
+            handleSettingsMenuClose()
+            onConfirm({
+              title: 'Clear All Drawings',
+              description: `Are you sure you want to clear all drawings for "${row.name}"?`,
+              onConfirm: () => clearRowDrawings(row.id),
+            })
+          }}
+          disabled={!hasDrawings}
+          sx={{ ...menuItemSx, color: 'primary.main' }}
+        >
+          <ClearIcon fontSize="small" />
+          Clear All Drawings
+        </MenuItem>
 
-          <Menu
-            id={`menu-${row.id}`}
-            anchorEl={settingsMenu}
-            open={openSettings}
-            onClose={handleSettingsMenuClose}
-            PaperProps={{
-              sx: {
-                background: "rgba(235, 242, 255, 0.55)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.6)",
-                borderRadius: 2,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                minWidth: 180,
-                p: 0.5,
-                "& .MuiMenuItem-root": {
-                  borderRadius: 1.5,
-                  fontSize: "0.875rem",
-                },
-              },
-            }}
-          >
+        <Divider sx={{ my: 0.5 }} />
+
+        <Tooltip title={isAuthenticated ? '' : 'Login required to delete'}>
+          <span>
             <MenuItem
               onClick={() => {
-                setConfirmProps({
-                  title: "Clear All Drawings",
-                  description: `Are you sure you want to clear all drawings for "${row.name}"?`,
-                  onConfirm: () => clearRowDrawings(row.id),
-                });
-                setConfirmOpen(true);
+                handleSettingsMenuClose()
+                onConfirm({
+                  title: 'Delete Item',
+                  description: `Are you sure you want to delete "${row.name}"?`,
+                  onConfirm: handleDeleteRow,
+                })
               }}
-              disabled={drawingCount === 0}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                color: "#1976d2",
-                "&:hover": { bgcolor: "rgba(25,118,210,0.1)" },
-              }}
+              disabled={!isAuthenticated}
+              sx={{ ...menuItemSx, color: 'error.main' }}
             >
-              <ClearIcon fontSize="small" sx={{ color: "#1976d2" }} />
-              Clear All Drawings
+              <DeleteIcon fontSize="small" />
+              {isAuthenticated ? 'Delete' : 'Login to Delete'}
             </MenuItem>
+          </span>
+        </Tooltip>
+      </Menu>
 
-            <Divider sx={{ my: 0.5, borderColor: "rgba(0,0,0,0.08)" }} />
-
-            <Tooltip title={isAuthenticated ? "" : "Login required to delete"}>
-              <span>
-                <MenuItem
-                  onClick={() => {
-                    setConfirmProps({
-                      title: "Delete Item",
-                      description: `Are you sure you want to delete "${row.name}"?`,
-                      onConfirm: handleDeleteRow,
-                    });
-                    setConfirmOpen(true);
-                  }}
-                  disabled={!isAuthenticated}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    color: "error.main",
-                    "&:hover": { bgcolor: "rgba(244,67,54,0.08)" },
-                  }}
-                >
-                  <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
-                  {isAuthenticated ? "Delete" : "Login to Delete"}
-                </MenuItem>
-              </span>
-            </Tooltip>
-          </Menu>
-
-          <Tooltip title="Show info">
-            <IconButton
-              size="small"
-              onClick={() => setInfoOpen(true)}
-              aria-label="info"
-              sx={{ padding: "3px", color: "#1976d2", flexShrink: 0, ml: 2 }}
-            >
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            sx={{
-              fontSize: "0.875rem",
-              color: "#333",
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            {row.name}
-          </Typography>
-        </Box>
-
-        {/* Actions */}
-        <Box
-          sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}
-        >
-          <Tooltip
-            title={drawingCount > 0 ? "View drawings" : "No drawings yet"}
-            arrow
-          >
-            <Box
-              onClick={handleColorClick}
-              sx={{
-                cursor: drawingCount > 0 ? "pointer" : "default",
-                width: 30,
-                height: 30,
-                backgroundColor: row.color,
-                border: "2px solid rgba(255,255,255,0.7)",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                boxShadow: `0 2px 8px rgba(0,0,0,0.2), 0 0 0 2px ${row.color}44`,
-                transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                ...(drawingCount > 0 && {
-                  "&:hover": {
-                    transform: "scale(1.18)",
-                    boxShadow: `0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px ${row.color}66`,
-                  },
-                }),
-              }}
-            >
-              {drawingCount}
-            </Box>
-          </Tooltip>
-
-          <Tooltip
-            title={
-              activeDrawingRow === row.id ? "Stop Drawing" : "Start Drawing"
-            }
-            arrow
-          >
-            <IconButton
-              onClick={handleSetActive}
-              size="small"
-              disableRipple
-              sx={{
-                borderRadius: 2,
-                backgroundColor: (theme) =>
-                  row.id === activeDrawingRow
-                    ? theme.palette.error.main
-                    : theme.palette.success.main,
-                color: "#fff",
-                "&:hover": {
-                  backgroundColor: (theme) =>
-                    row.id === activeDrawingRow
-                      ? theme.palette.error.main
-                      : theme.palette.success.main,
-                },
-              }}
-            >
-              {row.id === activeDrawingRow ? <StopIcon /> : <EditIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Paper>
-
-      <DescriptionDialog
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
-        title={row.name}
-        description={row.description}
-      />
-
-      <DrawingDropdown
-        anchorEl={dropdownAnchor}
-        open={openDrawings}
-        onClose={() => {
-          setOpenDropdownRowId(null);
-          setUserOpenedDropdown(false);
+      <ButtonBase
+        onClick={handleSetActive}
+        aria-label={
+          isActive
+            ? `Stop drawing ${row.name}`
+            : `Start drawing ${row.name}`
+        }
+        title={isActive ? 'Stop Drawing' : 'Start Drawing'}
+        sx={{
+          width: 34,
+          height: 34,
+          flex: 'none',
+          borderRadius: '9px',
+          color: '#fff',
+          bgcolor: isActive ? 'error.main' : 'primary.main',
+          ...focusRing,
         }}
-        drawings={rowDrawings}
-        row={row}
-      />
+      >
+        {isActive
+          ? (
+              <StopIcon sx={{ fontSize: 20 }} />
+            )
+          : (
+              <EditIcon sx={{ fontSize: 18 }} />
+            )}
+      </ButtonBase>
+    </Box>
+  )
+}
 
-      <ConfirmDialog
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title={confirmProps.title}
-        description={confirmProps.description}
-        onConfirm={confirmProps.onConfirm}
-      />
-    </>
-  );
-};
-
-export default DataRow;
+/**
+ * Memoised: clicking a draw button re-renders the two rows whose state
+ * changed, not the whole list.
+ */
+export default memo(DataRow)

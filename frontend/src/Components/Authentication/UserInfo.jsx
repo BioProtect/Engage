@@ -1,64 +1,70 @@
-import React from "react";
-import { Button, Typography, Box, Divider } from "@mui/material";
-import LogoutIcon from "@mui/icons-material/Logout";
-import PersonIcon from "@mui/icons-material/Person";
-import { useAuth } from "../../Contexts/AuthenticationContext";
-import { useMapContext } from "../../Contexts/MapContext";
+import LogoutIcon from '@mui/icons-material/Logout'
+import PersonIcon from '@mui/icons-material/Person'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import { alpha } from '@mui/material/styles'
+import { useAuth } from '../../Contexts/AuthenticationContext'
+import { useMapStable } from '../../Contexts/MapContext'
 
-const UserInfo = () => {
-  const { user, logout } = useAuth();
+// Signed-in user and Sign out, as its own row under the data menu footer;
+// renders nothing when signed out.
+function UserInfo() {
+  const { user, logout } = useAuth()
+  const { showSnackbar } = useMapStable()
 
-  const { showSnackbar } = useMapContext();
+  if (!user)
+    return null
 
   const handleLogout = () => {
-    logout();
-    showSnackbar(user.username + " has logged out!");
-  };
-
-  if (!user) return null;
+    logout()
+    showSnackbar(`${user.username} has logged out!`)
+  }
 
   return (
-    <>
-      <Divider sx={{ my: 1, borderColor: "rgba(0, 0, 0, 0.2)" }} />
-
+    <Box
+      sx={{
+        flex: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        p: '4px 8px 6px 12px',
+        borderTop: '1px solid',
+        borderColor: t => alpha(t.palette.primary.main, 0.14),
+      }}
+    >
+      <PersonIcon sx={{ fontSize: 18, color: 'primary.main' }} />
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          px: 2,
-          py: 1,
-          borderRadius: 3,
-          border: "1px solid rgba(0, 0, 0, 0.15)",
+          flex: 1,
+          minWidth: 0,
+          fontWeight: 700,
+          color: 'primary.main',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <PersonIcon sx={{ color: "#2196f3" }} />
-          <Typography sx={{ fontWeight: "bold", color: "#2196f3" }}>
-            {user.username}
-          </Typography>
-        </Box>
-
-        <Button
-          onClick={handleLogout}
-          variant="contained"
-          color="primary"
-          size="small"
-          startIcon={<LogoutIcon />}
-          sx={{
-            fontWeight: 600,
-            textTransform: "none",
-            px: 2.5,
-            py: 1,
-            borderRadius: 2,
-            boxShadow: "0 4px 14px rgba(25, 118, 210, 0.25)",
-          }}
-        >
-          Sign Out
-        </Button>
+        {user.username}
       </Box>
-    </>
-  );
-};
+      <Button
+        size="small"
+        startIcon={<LogoutIcon sx={{ fontSize: 16 }} />}
+        onClick={handleLogout}
+        sx={{
+          'flex': 'none',
+          'height': 30,
+          'px': '10px',
+          'borderRadius': '8px',
+          'fontSize': 12,
+          'fontWeight': 700,
+          'textTransform': 'none',
+          '& .MuiButton-startIcon': { mr: '4px' },
+        }}
+      >
+        Sign out
+      </Button>
+    </Box>
+  )
+}
 
-export default UserInfo;
+export default UserInfo
